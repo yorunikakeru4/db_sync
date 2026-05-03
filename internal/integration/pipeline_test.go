@@ -31,7 +31,7 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	// Step 1: create user.
 	err := consumer.DispatchEvent(ctx, &events.Event{
 		EventType: "user_created",
-		Payload:   map[string]any{"ID": 1, "Email": "alice@example.com"},
+		Payload:   map[string]any{"id": 1, "email": "alice@example.com"},
 	}, syncSvc)
 	require.NoError(t, err)
 
@@ -39,8 +39,8 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	err = consumer.DispatchEvent(ctx, &events.Event{
 		EventType: "email_added",
 		Payload: map[string]any{
-			"UserID": 1, "Address": "boss@work.com",
-			"Category": "vip", "Importance": 10,
+			"user_id": 1, "address": "boss@work.com",
+			"category": "vip", "importance": 10,
 		},
 	}, syncSvc)
 	require.NoError(t, err)
@@ -49,9 +49,9 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	err = consumer.DispatchEvent(ctx, &events.Event{
 		EventType: "message_created",
 		Payload: map[string]any{
-			"MessageID": 42, "UserID": 1,
-			"Subject": "Important", "Content": "Read me",
-			"DateSent": sentAt,
+			"message_id": 42, "user_id": 1,
+			"subject": "Important", "content": "Read me",
+			"date_sent": sentAt,
 		},
 	}, syncSvc)
 	require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestIntegration_UserCreated_Idempotent(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "user_created",
-		Payload:   map[string]any{"ID": 1, "Email": "alice@example.com"},
+		Payload:   map[string]any{"id": 1, "email": "alice@example.com"},
 	}
 	consumer := &kafkapkg.KafkaConsumer{}
 	syncSvc := buildSyncSvc(db)
@@ -108,7 +108,7 @@ func TestIntegration_UserDeleted_NonExistent(t *testing.T) {
 
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
 		EventType: "user_deleted",
-		Payload:   map[string]any{"ID": 999},
+		Payload:   map[string]any{"id": 999},
 	}, buildSyncSvc(db))
 
 	assert.NoError(t, err)

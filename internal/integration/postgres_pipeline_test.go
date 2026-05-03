@@ -67,10 +67,10 @@ func TestIntegration_EmailAdded_FromPostgres(t *testing.T) {
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
 		EventType: "email_added",
 		Payload: map[string]any{
-			"UserID":     userID,
-			"Address":    pgAddress,    // from PG
-			"Importance": pgImportance, // from PG
-			"Category":   "work",
+			"user_id":    userID,
+			"address":    pgAddress,    // from PG
+			"importance": pgImportance, // from PG
+			"category":   "work",
 		},
 	}, buildSyncSvc(db))
 	require.NoError(t, err)
@@ -128,11 +128,11 @@ func TestIntegration_MessageAdded_FromPostgres(t *testing.T) {
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
 		EventType: "message_created",
 		Payload: map[string]any{
-			"MessageID": msgID,
-			"UserID":    receiverID,
-			"Subject":   pgSubject,  // from PG
-			"Content":   pgText,     // from PG
-			"DateSent":  pgDateSent, // from PG
+			"message_id": msgID,
+			"user_id":    receiverID,
+			"subject":    pgSubject,  // from PG
+			"content":    pgText,     // from PG
+			"date_sent":  pgDateSent, // from PG
 		},
 	}, buildSyncSvc(db))
 	require.NoError(t, err)

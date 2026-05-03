@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 
 	"db_sync/internal/domain"
 	"db_sync/internal/view"
@@ -10,6 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+// ErrEmailViewUserNotFound indicates that the target user view document does not exist.
+var ErrEmailViewUserNotFound = errors.New("email view user not found")
 
 // EmailRepository reads email data from the PostgreSQL write model.
 type EmailRepository interface {
@@ -77,12 +81,18 @@ func (r *MongoEmailViewRepository) AddEmailToUser(
 	userID int,
 	email view.ImportantContactView,
 ) error {
-	_, err := r.DB.Collection("users").UpdateOne(
+	result, err := r.DB.Collection("users").UpdateOne(
 		ctx,
 		bson.M{"id": userID},
 		bson.M{"$push": bson.M{"important_contacts": email}},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.Join(ErrEmailViewUserNotFound, mongo.ErrNoDocuments)
+	}
+	return nil
 }
 
 // UpdateEmailForUser updates category and importance for the contact matching email.Email.
@@ -92,7 +102,7 @@ func (r *MongoEmailViewRepository) UpdateEmailForUser(
 	email view.ImportantContactView,
 ) error {
 	collection := r.DB.Collection("users")
-	_, err := collection.UpdateOne(
+	result, err := collection.UpdateOne(
 		ctx,
 		bson.M{"id": userID, "important_contacts.email": email.Email},
 		bson.M{
@@ -102,7 +112,13 @@ func (r *MongoEmailViewRepository) UpdateEmailForUser(
 			},
 		},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.Join(ErrEmailViewUserNotFound, mongo.ErrNoDocuments)
+	}
+	return nil
 }
 
 // RemoveEmailFromUser pulls the contact matching emailAddress from the user's contacts array.
@@ -112,10 +128,16 @@ func (r *MongoEmailViewRepository) RemoveEmailFromUser(
 	emailAddress string,
 ) error {
 	collection := r.DB.Collection("users")
-	_, err := collection.UpdateOne(
+	result, err := collection.UpdateOne(
 		ctx,
 		bson.M{"id": userID},
 		bson.M{"$pull": bson.M{"important_contacts": bson.M{"email": emailAddress}}},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.Join(ErrEmailViewUserNotFound, mongo.ErrNoDocuments)
+	}
+	return nil
 }

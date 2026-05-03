@@ -25,13 +25,17 @@ func NewKafkaConsumer(reader *kafka.Reader) *KafkaConsumer {
 
 // InitConsumer creates a kafka.Reader from the global KafkaConf.
 func InitConsumer() *kafka.Reader {
-	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:   []string{config.KafkaConf.Host + ":" + config.KafkaConf.Port},
-		Topic:     config.KafkaConf.Topic,
-		Partition: 0,
-		MaxBytes:  10e6,
-	})
-	return r
+	return kafka.NewReader(consumerConfig())
+}
+
+// consumerConfig builds the kafka.ReaderConfig from the global KafkaConf.
+func consumerConfig() kafka.ReaderConfig {
+	return kafka.ReaderConfig{
+		Brokers: []string{config.KafkaConf.Host + ":" + config.KafkaConf.Port},
+		Topic:   config.KafkaConf.Topic,
+		GroupID: config.KafkaConf.GroupID,
+		MaxBytes: 10e6,
+	}
 }
 
 // GetEvent reads the next message from Kafka and deserialises it into an Event.
@@ -58,7 +62,7 @@ func (kc *KafkaConsumer) DispatchEvent(
 	switch event.EventType {
 	case "user_created":
 		var payload events.UserCreatedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
@@ -66,42 +70,42 @@ func (kc *KafkaConsumer) DispatchEvent(
 
 	case "user_deleted":
 		var payload events.UserDeletedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
 		return syncService.UserService.HandleUserDeleted(ctx, payload)
 	case "message_created":
 		var payload events.MessageCreatedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
 		return syncService.MessageService.HandleMessageAddedToUser(ctx, payload)
 	case "message_deleted":
 		var payload events.MessageDeletedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
 		return syncService.MessageService.HandleMessageDeletedFromUser(ctx, payload)
 	case "email_added":
 		var payload events.EmailAddedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
 		return syncService.EmailService.HandleEmailAddedToUser(ctx, payload)
 	case "email_updated":
 		var payload events.EmailUpdatedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
 		return syncService.EmailService.HandleEmailUpdatedForUser(ctx, payload)
 	case "email_removed":
 		var payload events.EmailRemovedPayload
-		err := mapstructure.Decode(event.Payload, &payload)
+		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
@@ -109,6 +113,18 @@ func (kc *KafkaConsumer) DispatchEvent(
 	default:
 		return nil
 	}
+}
+
+// decodePayload maps a generic event payload into dst using JSON field tags.
+func decodePayload(payload any, dst any) error {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "json",
+		Result:  dst,
+	})
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(payload)
 }
 
 // Close releases the underlying Kafka reader.

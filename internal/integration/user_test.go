@@ -38,9 +38,9 @@ func TestIntegration_UserCreated(t *testing.T) {
 	event := &events.Event{
 		EventType: "user_created",
 		Payload: map[string]any{
-			"ID":        1,
-			"Email":     "alice@example.com",
-			"CreatedAt": createdAt,
+			"id":         1,
+			"email":      "alice@example.com",
+			"created_at": createdAt,
 		},
 	}
 	err = (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, event, syncSvc)
@@ -72,7 +72,7 @@ func TestIntegration_UserDeleted(t *testing.T) {
 	// Fire user_deleted event.
 	event := &events.Event{
 		EventType: "user_deleted",
-		Payload:   map[string]any{"ID": 2},
+		Payload:   map[string]any{"id": 2},
 	}
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, event, buildSyncSvc(db))
 	require.NoError(t, err)

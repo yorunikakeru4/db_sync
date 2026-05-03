@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func TestIntegration_MessageAdded(t *testing.T) {
@@ -29,11 +31,11 @@ func TestIntegration_MessageAdded(t *testing.T) {
 	event := &events.Event{
 		EventType: "message_created",
 		Payload: map[string]any{
-			"MessageID": 10,
-			"UserID":    1,
-			"Subject":   "Hello",
-			"Content":   "World",
-			"DateSent":  sentAt,
+			"message_id": 10,
+			"user_id":    1,
+			"subject":    "Hello",
+			"content":    "World",
+			"date_sent":  sentAt,
 		},
 	}
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, event, buildSyncSvc(db))
@@ -64,7 +66,7 @@ func TestIntegration_MessageDeleted(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "message_deleted",
-		Payload:   map[string]any{"MessageID": 10, "UserID": 1},
+		Payload:   map[string]any{"message_id": 10, "user_id": 1},
 	}
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, event, buildSyncSvc(db))
 	require.NoError(t, err)
@@ -72,4 +74,24 @@ func TestIntegration_MessageDeleted(t *testing.T) {
 	var result view.UserView
 	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 1}).Decode(&result))
 	assert.Empty(t, result.Messages)
+}
+
+func TestIntegration_MessageAdded_UserNotFound(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	db.Reset(t)
+	ctx := context.Background()
+
+	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
+		EventType: "message_created",
+		Payload: map[string]any{
+			"message_id": 10,
+			"user_id":    999,
+			"subject":    "Hello",
+			"content":    "World",
+			"date_sent":  time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC),
+		},
+	}, buildSyncSvc(db))
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, mongo.ErrNoDocuments))
 }

@@ -3,6 +3,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 
 	"db_sync/internal/domain"
 	"db_sync/internal/view"
@@ -11,6 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+// ErrMessageViewUserNotFound indicates that the target user view document does not exist.
+var ErrMessageViewUserNotFound = errors.New("message view user not found")
 
 // MessageRepository reads messages from the PostgreSQL write model.
 type MessageRepository interface {
@@ -77,12 +81,18 @@ func (r *MongoMessageViewRepository) AddMessageToUser(
 	userID int,
 	message view.MessageView,
 ) error {
-	_, err := r.DB.Collection("users").UpdateOne(
+	result, err := r.DB.Collection("users").UpdateOne(
 		ctx,
 		bson.M{"id": userID},
 		bson.M{"$push": bson.M{"messages": message}},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.Join(ErrMessageViewUserNotFound, mongo.ErrNoDocuments)
+	}
+	return nil
 }
 
 // RemoveMessageFromUser removes the message with messageID from the user's messages array.
@@ -91,10 +101,16 @@ func (r *MongoMessageViewRepository) RemoveMessageFromUser(
 	userID int,
 	messageID int,
 ) error {
-	_, err := r.DB.Collection("users").UpdateOne(
+	result, err := r.DB.Collection("users").UpdateOne(
 		ctx,
 		bson.M{"id": userID},
 		bson.M{"$pull": bson.M{"messages": bson.M{"id": messageID}}},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.Join(ErrMessageViewUserNotFound, mongo.ErrNoDocuments)
+	}
+	return nil
 }

@@ -3,8 +3,10 @@ package kafka
 import (
 	"context"
 	"testing"
+	"time"
 
 	"db_sync/internal/application/events"
+	"db_sync/internal/config"
 	"db_sync/internal/service"
 	"db_sync/internal/storage/mocks"
 
@@ -38,7 +40,7 @@ func TestDispatchEvent_UserCreated(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "user_created",
-		Payload:   map[string]any{"ID": 1, "Email": "alice@example.com"},
+		Payload:   map[string]any{"id": 1, "email": "alice@example.com"},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
@@ -60,7 +62,7 @@ func TestDispatchEvent_UserDeleted(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "user_deleted",
-		Payload:   map[string]any{"ID": 1},
+		Payload:   map[string]any{"id": 1},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
@@ -80,7 +82,13 @@ func TestDispatchEvent_MessageCreated(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "message_created",
-		Payload:   map[string]any{"MessageID": 10, "UserID": 1, "Subject": "Hi", "Content": "Body"},
+		Payload: map[string]any{
+			"message_id": 10,
+			"user_id":    1,
+			"subject":    "Hi",
+			"content":    "Body",
+			"date_sent":  time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC),
+		},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
@@ -100,7 +108,7 @@ func TestDispatchEvent_MessageDeleted(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "message_deleted",
-		Payload:   map[string]any{"MessageID": 10, "UserID": 1},
+		Payload:   map[string]any{"message_id": 10, "user_id": 1},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
@@ -120,7 +128,12 @@ func TestDispatchEvent_EmailAdded(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "email_added",
-		Payload:   map[string]any{"UserID": 1, "Address": "x@example.com", "Category": "work", "Importance": 5},
+		Payload: map[string]any{
+			"user_id":    1,
+			"address":    "x@example.com",
+			"category":   "work",
+			"importance": 5,
+		},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
@@ -141,8 +154,10 @@ func TestDispatchEvent_EmailUpdated(t *testing.T) {
 	event := &events.Event{
 		EventType: "email_updated",
 		Payload: map[string]any{
-			"UserID": 1, "Address": "x@example.com",
-			"NewCategory": "vip", "NewImportance": 10,
+			"user_id":        1,
+			"address":        "x@example.com",
+			"new_category":   "vip",
+			"new_importance": 10,
 		},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
@@ -163,7 +178,7 @@ func TestDispatchEvent_EmailRemoved(t *testing.T) {
 
 	event := &events.Event{
 		EventType: "email_removed",
-		Payload:   map[string]any{"UserID": 1, "Address": "x@example.com"},
+		Payload:   map[string]any{"user_id": 1, "address": "x@example.com"},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
@@ -187,4 +202,25 @@ func TestDispatchEvent_UnknownType(t *testing.T) {
 	userViewRepo.AssertNotCalled(t, "DeleteUserView")
 	emailViewRepo.AssertNotCalled(t, "AddEmailToUser")
 	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
+}
+
+func TestConsumerConfig_UsesConsumerGroup(t *testing.T) {
+	oldCfg := config.KafkaConf
+	t.Cleanup(func() {
+		config.KafkaConf = oldCfg
+	})
+
+	config.KafkaConf = config.KafkaConfig{
+		Topic:   "sync_topic",
+		Host:    "kafka",
+		Port:    "9092",
+		GroupID: "db-sync",
+	}
+
+	cfg := consumerConfig()
+
+	assert.Equal(t, []string{"kafka:9092"}, cfg.Brokers)
+	assert.Equal(t, "sync_topic", cfg.Topic)
+	assert.Equal(t, "db-sync", cfg.GroupID)
+	assert.Zero(t, cfg.Partition)
 }

@@ -26,6 +26,14 @@ task cqrs:test
 task cqrs:test:integration
 ```
 
+Прямой вход в модуль тоже рабочий:
+
+```bash
+cd cqrs
+task build
+task run
+```
+
 ## Дальше
 
 Следующий сервис можно добавлять рядом с `cqrs/` как отдельный модуль, например `backend/`.

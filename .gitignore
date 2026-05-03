@@ -1,2 +1,4 @@
 .env
 db_sync
+cqrs/db_sync
+go.work.sum

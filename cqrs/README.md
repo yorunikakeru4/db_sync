@@ -72,17 +72,18 @@
 Быстрый старт:
 
 ```bash
-task -t ../Taskfile.yml init
-task -t ../Taskfile.yml up:docker
-go build -o db_sync ./cmd/db_sync/...
-./db_sync
+cd ..
+task init
+task up:docker
+task cqrs:run
 ```
 
 Если используется Podman:
 
 ```bash
-task -t ../Taskfile.yml up:podman
-task run
+cd ..
+task up:podman
+task cqrs:run
 ```
 
 Mongo Express поднимается на `http://localhost:8081`.
@@ -92,12 +93,19 @@ Mongo Express поднимается на `http://localhost:8081`.
 Unit:
 
 ```bash
-task test
+task cqrs:test
 ```
 
 Integration:
 
 ```bash
+task cqrs:test:integration
+```
+
+Если уже находишься в `cqrs/`, можно запускать локальные команды модуля:
+
+```bash
+task test
 task test:integration
 ```
 

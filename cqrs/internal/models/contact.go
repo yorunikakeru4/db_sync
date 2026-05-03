@@ -1,12 +1,12 @@
 // Package models defines the data structures used in the application.
 package models
 
-// Email represents an important contact associated with a user.
-type Email struct {
-	// ID is the primary key of the email record.
+// Contact represents an important contact associated with a user.
+type Contact struct {
+	// ID is the primary key of the contact record.
 	ID int
-	// Address is the email address string.
-	Address string
+	// Value is the contact value string.
+	Value string
 	// Category is the user-assigned category label for this contact.
 	Category string
 	// Importance is the user-assigned importance level for this contact.

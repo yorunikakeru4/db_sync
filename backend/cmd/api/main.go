@@ -54,7 +54,7 @@ func main() {
 		Producer:  producer,
 		Users:     storage.NewUserRepo(bunDB),
 		Messages:  storage.NewMessageRepo(bunDB),
-		Emails:    storage.NewEmailRepo(bunDB),
+		Contacts:  storage.NewContactRepo(bunDB),
 		UserViews: storage.NewUserViewRepo(mongoDB),
 	})
 	if err != nil {

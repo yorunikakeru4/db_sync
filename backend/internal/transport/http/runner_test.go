@@ -30,7 +30,7 @@ func TestHTTPDatadriven(t *testing.T) {
 	live := testutil.NewTestDB(t)
 	bunDB := bun.NewDB(live.PG.DB, pgdialect.New())
 	t.Cleanup(func() {
-		_ = bunDB.Close()
+		bunDB.Close()
 	})
 
 	producer := &kafka.MemProducer{}
@@ -38,7 +38,7 @@ func TestHTTPDatadriven(t *testing.T) {
 		Producer:  producer,
 		Users:     storage.NewUserRepo(bunDB),
 		Messages:  storage.NewMessageRepo(bunDB),
-		Emails:    storage.NewEmailRepo(bunDB),
+		Contacts:  storage.NewContactRepo(bunDB),
 		UserViews: storage.NewUserViewRepo(live.Mongo),
 	})
 	if err != nil {
@@ -190,26 +190,26 @@ func decodeOrderedResponse(method, path string, body []byte) (any, bool) {
 			DateSent:   stringValue(raw["DateSent"]),
 			CreatedAt:  stringValue(raw["CreatedAt"]),
 		}, true
-	case (method == nethttp.MethodPost || method == nethttp.MethodPut) && strings.Contains(path, "/emails"):
+	case (method == nethttp.MethodPost || method == nethttp.MethodPut) && strings.Contains(path, "/contacts"):
 		var raw map[string]any
 		if err := json.Unmarshal(body, &raw); err != nil {
 			return nil, false
 		}
-		email, _ := raw["email"].(map[string]any)
-		userEmail, _ := raw["user_email"].(map[string]any)
-		return &emailOperationResponseOutput{
-			Email: emailDTO{
-				ID:        int64Value(firstMapValue(email, "ID", "id")),
-				Address:   stringValue(firstMapValue(email, "Address", "address")),
-				CreatedAt: stringValue(firstMapValue(email, "CreatedAt", "created_at")),
+		contact, _ := raw["contact"].(map[string]any)
+		userContact, _ := raw["user_contact"].(map[string]any)
+		return &contactOperationResponseOutput{
+			Contact: contactDTO{
+				ID:        int64Value(firstMapValue(contact, "ID", "id")),
+				Value:     stringValue(firstMapValue(contact, "Value", "value")),
+				CreatedAt: stringValue(firstMapValue(contact, "CreatedAt", "created_at")),
 			},
-			UserEmail: userEmailDTO{
-				ID:         int64Value(firstMapValue(userEmail, "ID", "id")),
-				UserID:     int64Value(firstMapValue(userEmail, "UserID", "user_id")),
-				EmailID:    int64Value(firstMapValue(userEmail, "EmailID", "email_id")),
-				Importance: intValue(firstMapValue(userEmail, "Importance", "importance")),
-				Category:   intValue(firstMapValue(userEmail, "Category", "category")),
-				CreatedAt:  stringValue(firstMapValue(userEmail, "CreatedAt", "created_at")),
+			UserContact: userContactDTO{
+				ID:         int64Value(firstMapValue(userContact, "ID", "id")),
+				UserID:     int64Value(firstMapValue(userContact, "UserID", "user_id")),
+				ContactID:  int64Value(firstMapValue(userContact, "ContactID", "contact_id")),
+				Importance: intValue(firstMapValue(userContact, "Importance", "importance")),
+				Category:   intValue(firstMapValue(userContact, "Category", "category")),
+				CreatedAt:  stringValue(firstMapValue(userContact, "CreatedAt", "created_at")),
 			},
 		}, true
 	default:
@@ -273,9 +273,9 @@ func normalizeHTTPBody(method, path string, value any) {
 			item.CreatedAt = "ignore"
 		}
 		return
-	case *emailOperationResponseOutput:
-		item.Email.CreatedAt = "ignore"
-		item.UserEmail.CreatedAt = "ignore"
+	case *contactOperationResponseOutput:
+		item.Contact.CreatedAt = "ignore"
+		item.UserContact.CreatedAt = "ignore"
 		return
 	}
 
@@ -293,12 +293,12 @@ func normalizeHTTPBody(method, path string, value any) {
 			root["DateSent"] = normalizeRFC3339(dateSent)
 		}
 	}
-	if (method == nethttp.MethodPost || method == nethttp.MethodPut) && strings.Contains(path, "/emails") {
-		if email, ok := root["email"].(map[string]any); ok {
-			email["CreatedAt"] = "ignore"
+	if (method == nethttp.MethodPost || method == nethttp.MethodPut) && strings.Contains(path, "/contacts") {
+		if contact, ok := root["contact"].(map[string]any); ok {
+			contact["CreatedAt"] = "ignore"
 		}
-		if userEmail, ok := root["user_email"].(map[string]any); ok {
-			userEmail["CreatedAt"] = "ignore"
+		if userContact, ok := root["user_contact"].(map[string]any); ok {
+			userContact["CreatedAt"] = "ignore"
 		}
 	}
 
@@ -327,9 +327,9 @@ func normalizeKafkaBody(value any) {
 	}
 
 	switch root["event_type"] {
-	case "user_created", "email_added":
+	case "user_created", "contact_added":
 		payload["created_at"] = "ignore"
-	case "email_updated":
+	case "contact_updated":
 		payload["updated_at"] = "ignore"
 	}
 }
@@ -375,19 +375,19 @@ type messageDeletedPayloadOutput struct {
 	UserID    int `yaml:"user_id"`
 }
 
-type emailAddedPayloadOutput struct {
-	EmailID    int    `yaml:"email_id"`
+type contactAddedPayloadOutput struct {
+	ContactID  int    `yaml:"contact_id"`
 	UserID     int    `yaml:"user_id"`
-	Address    string `yaml:"address"`
+	Value      string `yaml:"value"`
 	Category   string `yaml:"category"`
 	Importance int    `yaml:"importance"`
 	CreatedAt  string `yaml:"created_at"`
 }
 
-type emailUpdatedPayloadOutput struct {
-	EmailID       int    `yaml:"email_id"`
-	Address       string `yaml:"address"`
-	OldAddress    string `yaml:"old_address"`
+type contactUpdatedPayloadOutput struct {
+	ContactID     int    `yaml:"contact_id"`
+	Value         string `yaml:"value"`
+	OldValue      string `yaml:"old_value"`
 	UserID        int    `yaml:"user_id"`
 	OldCategory   string `yaml:"old_category"`
 	NewCategory   string `yaml:"new_category"`
@@ -396,10 +396,10 @@ type emailUpdatedPayloadOutput struct {
 	UpdatedAt     string `yaml:"updated_at"`
 }
 
-type emailRemovedPayloadOutput struct {
-	EmailID int    `yaml:"email_id"`
-	Address string `yaml:"address"`
-	UserID  int    `yaml:"user_id"`
+type contactRemovedPayloadOutput struct {
+	ContactID int    `yaml:"contact_id"`
+	Value     string `yaml:"value"`
+	UserID    int    `yaml:"user_id"`
 }
 
 type userResponseOutput struct {
@@ -409,12 +409,12 @@ type userResponseOutput struct {
 }
 
 type userViewResponseOutput struct {
-	ID                int64                       `json:"id" yaml:"id"`
-	Email             string                      `json:"email" yaml:"email"`
-	NumMessages       int                         `json:"num_messages" yaml:"num_messages"`
+	ID                int64                            `json:"id" yaml:"id"`
+	Email             string                           `json:"email" yaml:"email"`
+	NumMessages       int                              `json:"num_messages" yaml:"num_messages"`
 	ImportantContacts []readmodel.ImportantContactView `json:"important_contacts" yaml:"important_contacts"`
-	Messages          []messageViewOutput         `json:"messages" yaml:"messages"`
-	CreatedAt         string                      `json:"created_at" yaml:"created_at"`
+	Messages          []messageViewOutput              `json:"messages" yaml:"messages"`
+	CreatedAt         string                           `json:"created_at" yaml:"created_at"`
 }
 
 type messageViewOutput struct {
@@ -435,21 +435,21 @@ type messageResponseOutput struct {
 	CreatedAt  string `json:"created_at" yaml:"created_at"`
 }
 
-type emailOperationResponseOutput struct {
-	Email     emailDTO     `yaml:"email"`
-	UserEmail userEmailDTO `yaml:"user_email"`
+type contactOperationResponseOutput struct {
+	Contact     contactDTO     `yaml:"contact"`
+	UserContact userContactDTO `yaml:"user_contact"`
 }
 
-type emailDTO struct {
+type contactDTO struct {
 	ID        int64  `yaml:"ID"`
-	Address   string `yaml:"Address"`
+	Value     string `yaml:"Value"`
 	CreatedAt string `yaml:"CreatedAt"`
 }
 
-type userEmailDTO struct {
+type userContactDTO struct {
 	ID         int64  `yaml:"ID"`
 	UserID     int64  `yaml:"UserID"`
-	EmailID    int64  `yaml:"EmailID"`
+	ContactID  int64  `yaml:"ContactID"`
 	Importance int    `yaml:"Importance"`
 	Category   int    `yaml:"Category"`
 	CreatedAt  string `yaml:"CreatedAt"`
@@ -525,20 +525,20 @@ func orderedKafkaPayload(root map[string]any) any {
 			MessageID: intValue(payload["message_id"]),
 			UserID:    intValue(payload["user_id"]),
 		}
-	case "email_added":
-		return emailAddedPayloadOutput{
-			EmailID:    intValue(payload["email_id"]),
+	case "contact_added":
+		return contactAddedPayloadOutput{
+			ContactID:  intValue(payload["contact_id"]),
 			UserID:     intValue(payload["user_id"]),
-			Address:    stringValue(payload["address"]),
+			Value:      stringValue(payload["value"]),
 			Category:   stringValue(payload["category"]),
 			Importance: intValue(payload["importance"]),
 			CreatedAt:  stringValue(payload["created_at"]),
 		}
-	case "email_updated":
-		return emailUpdatedPayloadOutput{
-			EmailID:       intValue(payload["email_id"]),
-			Address:       stringValue(payload["address"]),
-			OldAddress:    stringValue(payload["old_address"]),
+	case "contact_updated":
+		return contactUpdatedPayloadOutput{
+			ContactID:     intValue(payload["contact_id"]),
+			Value:         stringValue(payload["value"]),
+			OldValue:      stringValue(payload["old_value"]),
 			UserID:        intValue(payload["user_id"]),
 			OldCategory:   stringValue(payload["old_category"]),
 			NewCategory:   stringValue(payload["new_category"]),
@@ -546,11 +546,11 @@ func orderedKafkaPayload(root map[string]any) any {
 			NewImportance: intValue(payload["new_importance"]),
 			UpdatedAt:     stringValue(payload["updated_at"]),
 		}
-	case "email_removed":
-		return emailRemovedPayloadOutput{
-			EmailID: intValue(payload["email_id"]),
-			Address: stringValue(payload["address"]),
-			UserID:  intValue(payload["user_id"]),
+	case "contact_removed":
+		return contactRemovedPayloadOutput{
+			ContactID: intValue(payload["contact_id"]),
+			Value:     stringValue(payload["value"]),
+			UserID:    intValue(payload["user_id"]),
 		}
 	default:
 		return payload

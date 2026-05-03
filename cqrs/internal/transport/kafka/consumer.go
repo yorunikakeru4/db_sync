@@ -91,27 +91,27 @@ func (kc *KafkaConsumer) DispatchEvent(
 			return err
 		}
 		return syncService.MessageService.HandleMessageDeletedFromUser(ctx, payload)
-	case "email_added":
-		var payload events.EmailAddedPayload
+	case "contact_added":
+		var payload events.ContactAddedPayload
 		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
-		return syncService.EmailService.HandleEmailAddedToUser(ctx, payload)
-	case "email_updated":
-		var payload events.EmailUpdatedPayload
+		return syncService.ContactService.HandleContactAddedToUser(ctx, payload)
+	case "contact_updated":
+		var payload events.ContactUpdatedPayload
 		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
-		return syncService.EmailService.HandleEmailUpdatedForUser(ctx, payload)
-	case "email_removed":
-		var payload events.EmailRemovedPayload
+		return syncService.ContactService.HandleContactUpdatedForUser(ctx, payload)
+	case "contact_removed":
+		var payload events.ContactRemovedPayload
 		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
-		return syncService.EmailService.HandleEmailRemovedFromUser(ctx, payload)
+		return syncService.ContactService.HandleContactRemovedFromUser(ctx, payload)
 	default:
 		return nil
 	}

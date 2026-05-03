@@ -181,21 +181,21 @@ func TestHandler_DeleteMessagePublishesEvent(t *testing.T) {
 	assertEventType(t, producer, events.MessageDeleted)
 }
 
-// TestHandler_AddEmailPublishesEvent verifies POST /users/:id/emails emits email_added.
-func TestHandler_AddEmailPublishesEvent(t *testing.T) {
+// TestHandler_AddContactPublishesEvent verifies POST /users/:id/contacts emits contact_added.
+func TestHandler_AddContactPublishesEvent(t *testing.T) {
 	producer := &kafka.MemProducer{}
 	handler := newTestHandler(t, producer, &stubDeps{
-		emails: &stubEmailStore{
-			addUserEmailFn: func(_ context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) error {
-				email.ID = 8
-				userEmail.CreatedAt = time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)
+		contacts: &stubContactStore{
+			addUserContactFn: func(_ context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) error {
+				contact.ID = 8
+				userContact.CreatedAt = time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)
 				return nil
 			},
 		},
 	})
 
-	req := httptest.NewRequest(nethttp.MethodPost, "/users/1/emails", bytes.NewBufferString(
-		"email_id: 8\naddress: a@example.com\nimportance: 3\ncategory: 7\n",
+	req := httptest.NewRequest(nethttp.MethodPost, "/users/1/contacts", bytes.NewBufferString(
+		"contact_id: 8\nvalue: a@example.com\nimportance: 3\ncategory: 7\n",
 	))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -203,22 +203,22 @@ func TestHandler_AddEmailPublishesEvent(t *testing.T) {
 	if rec.Code != nethttp.StatusCreated {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, nethttp.StatusCreated, rec.Body.String())
 	}
-	assertEventType(t, producer, events.EmailAdded)
+	assertEventType(t, producer, events.ContactAdded)
 }
 
-// TestHandler_UpdateEmailPublishesEvent verifies PUT /users/:uid/emails/:id emits email_updated.
-func TestHandler_UpdateEmailPublishesEvent(t *testing.T) {
+// TestHandler_UpdateContactPublishesEvent verifies PUT /users/:uid/contacts/:id emits contact_updated.
+func TestHandler_UpdateContactPublishesEvent(t *testing.T) {
 	producer := &kafka.MemProducer{}
 	handler := newTestHandler(t, producer, &stubDeps{
-		emails: &stubEmailStore{
-			updateUserEmailFn: func(_ context.Context, _ *bunmodel.UserEmail, _ *bunmodel.Email) (*backendstorage.EmailUpdateSnapshot, error) {
-				return &backendstorage.EmailUpdateSnapshot{OldAddress: "before@example.com", OldCategory: 1, OldImportance: 2}, nil
+		contacts: &stubContactStore{
+			updateUserContactFn: func(_ context.Context, _ *bunmodel.UserContact, _ *bunmodel.Contact) (*backendstorage.ContactUpdateSnapshot, error) {
+				return &backendstorage.ContactUpdateSnapshot{OldValue: "before@example.com", OldCategory: 1, OldImportance: 2}, nil
 			},
 		},
 	})
 
-	req := httptest.NewRequest(nethttp.MethodPut, "/users/1/emails/8", bytes.NewBufferString(
-		"address: a@example.com\nimportance: 5\ncategory: 9\n",
+	req := httptest.NewRequest(nethttp.MethodPut, "/users/1/contacts/8", bytes.NewBufferString(
+		"value: a@example.com\nimportance: 5\ncategory: 9\n",
 	))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -226,34 +226,34 @@ func TestHandler_UpdateEmailPublishesEvent(t *testing.T) {
 	if rec.Code != nethttp.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, nethttp.StatusOK, rec.Body.String())
 	}
-	assertEventType(t, producer, events.EmailUpdated)
+	assertEventType(t, producer, events.ContactUpdated)
 }
 
-// TestHandler_DeleteEmailPublishesEvent verifies DELETE /users/:uid/emails/:id emits email_removed.
-func TestHandler_DeleteEmailPublishesEvent(t *testing.T) {
+// TestHandler_DeleteContactPublishesEvent verifies DELETE /users/:uid/contacts/:id emits contact_removed.
+func TestHandler_DeleteContactPublishesEvent(t *testing.T) {
 	producer := &kafka.MemProducer{}
 	handler := newTestHandler(t, producer, &stubDeps{
-		emails: &stubEmailStore{
-			deleteUserEmailFn: func(_ context.Context, _ int64, id int64) (*backendstorage.DeletedUserEmail, error) {
-				return &backendstorage.DeletedUserEmail{Email: bunmodel.Email{ID: id, Address: "gone@example.com"}}, nil
+		contacts: &stubContactStore{
+			deleteUserContactFn: func(_ context.Context, _ int64, id int64) (*backendstorage.DeletedUserContact, error) {
+				return &backendstorage.DeletedUserContact{Contact: bunmodel.Contact{ID: id, Value: "gone@example.com"}}, nil
 			},
 		},
 	})
 
-	req := httptest.NewRequest(nethttp.MethodDelete, "/users/1/emails/8", nil)
+	req := httptest.NewRequest(nethttp.MethodDelete, "/users/1/contacts/8", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != nethttp.StatusNoContent {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, nethttp.StatusNoContent, rec.Body.String())
 	}
-	assertEventType(t, producer, events.EmailRemoved)
+	assertEventType(t, producer, events.ContactRemoved)
 }
 
 type stubDeps struct {
 	users     *stubUserStore
 	messages  *stubMessageStore
-	emails    *stubEmailStore
+	contacts  *stubContactStore
 	userViews *stubUserViewStore
 }
 
@@ -269,8 +269,8 @@ func newTestHandler(t *testing.T, producer *kafka.MemProducer, deps *stubDeps) *
 	if deps.messages == nil {
 		deps.messages = &stubMessageStore{}
 	}
-	if deps.emails == nil {
-		deps.emails = &stubEmailStore{}
+	if deps.contacts == nil {
+		deps.contacts = &stubContactStore{}
 	}
 	if deps.userViews == nil {
 		deps.userViews = &stubUserViewStore{}
@@ -280,7 +280,7 @@ func newTestHandler(t *testing.T, producer *kafka.MemProducer, deps *stubDeps) *
 		Producer:  producer,
 		Users:     deps.users,
 		Messages:  deps.messages,
-		Emails:    deps.emails,
+		Contacts:  deps.contacts,
 		UserViews: deps.userViews,
 	})
 	if err != nil {
@@ -359,34 +359,34 @@ func (s *stubMessageStore) DeleteMessage(ctx context.Context, id int64) (*bunmod
 	return s.deleteMessageFn(ctx, id)
 }
 
-type stubEmailStore struct {
-	addUserEmailFn    func(ctx context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) error
-	updateUserEmailFn func(ctx context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) (*backendstorage.EmailUpdateSnapshot, error)
-	deleteUserEmailFn func(ctx context.Context, userID int64, emailID int64) (*backendstorage.DeletedUserEmail, error)
+type stubContactStore struct {
+	addUserContactFn    func(ctx context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) error
+	updateUserContactFn func(ctx context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) (*backendstorage.ContactUpdateSnapshot, error)
+	deleteUserContactFn func(ctx context.Context, userID int64, contactID int64) (*backendstorage.DeletedUserContact, error)
 }
 
-// AddUserEmail inserts a user-email link in the stub store.
-func (s *stubEmailStore) AddUserEmail(ctx context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) error {
-	if s.addUserEmailFn == nil {
+// AddUserContact inserts a user-contact link in the stub store.
+func (s *stubContactStore) AddUserContact(ctx context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) error {
+	if s.addUserContactFn == nil {
 		return nil
 	}
-	return s.addUserEmailFn(ctx, userEmail, email)
+	return s.addUserContactFn(ctx, userContact, contact)
 }
 
-// UpdateUserEmail updates a user-email link in the stub store.
-func (s *stubEmailStore) UpdateUserEmail(ctx context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) (*backendstorage.EmailUpdateSnapshot, error) {
-	if s.updateUserEmailFn == nil {
-		return &backendstorage.EmailUpdateSnapshot{}, nil
+// UpdateUserContact updates a user-contact link in the stub store.
+func (s *stubContactStore) UpdateUserContact(ctx context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) (*backendstorage.ContactUpdateSnapshot, error) {
+	if s.updateUserContactFn == nil {
+		return &backendstorage.ContactUpdateSnapshot{}, nil
 	}
-	return s.updateUserEmailFn(ctx, userEmail, email)
+	return s.updateUserContactFn(ctx, userContact, contact)
 }
 
-// DeleteUserEmail deletes a user-email link in the stub store.
-func (s *stubEmailStore) DeleteUserEmail(ctx context.Context, userID int64, emailID int64) (*backendstorage.DeletedUserEmail, error) {
-	if s.deleteUserEmailFn == nil {
-		return &backendstorage.DeletedUserEmail{}, nil
+// DeleteUserContact deletes a user-contact link in the stub store.
+func (s *stubContactStore) DeleteUserContact(ctx context.Context, userID int64, contactID int64) (*backendstorage.DeletedUserContact, error) {
+	if s.deleteUserContactFn == nil {
+		return &backendstorage.DeletedUserContact{}, nil
 	}
-	return s.deleteUserEmailFn(ctx, userID, emailID)
+	return s.deleteUserContactFn(ctx, userID, contactID)
 }
 
 type stubUserViewStore struct {

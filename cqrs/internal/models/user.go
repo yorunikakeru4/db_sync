@@ -10,8 +10,8 @@ type User struct {
 	ID int
 	// Email is the user's email address.
 	Email string
-	// ImportantEmails is the list of email contacts marked as important by the user.
-	ImportantEmails []Email
+	// ImportantContacts is the list of contacts marked as important by the user.
+	ImportantContacts []Contact
 	// Messages is the list of messages associated with the user.
 	Messages []Message
 	// CreatedAt is the UTC timestamp when the user was created.

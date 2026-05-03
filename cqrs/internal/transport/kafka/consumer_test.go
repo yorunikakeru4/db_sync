@@ -18,24 +18,24 @@ import (
 // syncServiceWith builds a SyncService backed by the provided mock repositories.
 func syncServiceWith(
 	userViewRepo *mocks.MockUserViewRepository,
-	emailViewRepo *mocks.MockEmailViewRepository,
+	contactViewRepo *mocks.MockContactViewRepository,
 	msgViewRepo *mocks.MockMessageViewRepository,
 ) *service.SyncService {
 	userRepo := new(mocks.MockUserRepository)
 	userSvc := service.NewUserService(userRepo, userViewRepo)
-	emailSvc := service.NewEmailService(emailViewRepo)
+	contactSvc := service.NewContactService(contactViewRepo)
 	msgSvc := service.NewMessageService(msgViewRepo)
-	return service.NewSyncService(userSvc, emailSvc, msgSvc)
+	return service.NewSyncService(userSvc, contactSvc, msgSvc)
 }
 
 func TestDispatchEvent_UserCreated(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
 	userViewRepo.On("CreateUserView", mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
@@ -46,18 +46,18 @@ func TestDispatchEvent_UserCreated(t *testing.T) {
 
 	require.NoError(t, err)
 	userViewRepo.AssertCalled(t, "CreateUserView", mock.Anything, mock.Anything)
-	emailViewRepo.AssertNotCalled(t, "AddEmailToUser")
+	contactViewRepo.AssertNotCalled(t, "AddContactToUser")
 	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
 }
 
 func TestDispatchEvent_UserCreated_StringTimestamp(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
 	userViewRepo.On("CreateUserView", mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
@@ -76,12 +76,12 @@ func TestDispatchEvent_UserCreated_StringTimestamp(t *testing.T) {
 
 func TestDispatchEvent_UserDeleted(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
 	userViewRepo.On("DeleteUserView", mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
@@ -96,12 +96,12 @@ func TestDispatchEvent_UserDeleted(t *testing.T) {
 
 func TestDispatchEvent_MessageCreated(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
 	msgViewRepo.On("AddMessageToUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
@@ -122,12 +122,12 @@ func TestDispatchEvent_MessageCreated(t *testing.T) {
 
 func TestDispatchEvent_MessageDeleted(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
 	msgViewRepo.On("RemoveMessageFromUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
@@ -140,21 +140,21 @@ func TestDispatchEvent_MessageDeleted(t *testing.T) {
 	msgViewRepo.AssertCalled(t, "RemoveMessageFromUser", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestDispatchEvent_EmailAdded(t *testing.T) {
+func TestDispatchEvent_ContactAdded(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
-	emailViewRepo.On("AddEmailToUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	contactViewRepo.On("AddContactToUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
-		EventType: "email_added",
+		EventType: "contact_added",
 		Payload: map[string]any{
 			"user_id":    1,
-			"address":    "x@example.com",
+			"value":      "x@example.com",
 			"category":   "work",
 			"importance": 5,
 		},
@@ -162,25 +162,25 @@ func TestDispatchEvent_EmailAdded(t *testing.T) {
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
 	require.NoError(t, err)
-	emailViewRepo.AssertCalled(t, "AddEmailToUser", mock.Anything, mock.Anything, mock.Anything)
+	contactViewRepo.AssertCalled(t, "AddContactToUser", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestDispatchEvent_EmailUpdated(t *testing.T) {
+func TestDispatchEvent_ContactUpdated(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
-	emailViewRepo.On("UpdateEmailForUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	contactViewRepo.On("UpdateContactForUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
-		EventType: "email_updated",
+		EventType: "contact_updated",
 		Payload: map[string]any{
 			"user_id":        1,
-			"address":        "x@example.com",
-			"old_address":    "old@example.com",
+			"value":          "x@example.com",
+			"old_value":      "old@example.com",
 			"new_category":   "vip",
 			"new_importance": 10,
 		},
@@ -188,35 +188,35 @@ func TestDispatchEvent_EmailUpdated(t *testing.T) {
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
 	require.NoError(t, err)
-	emailViewRepo.AssertCalled(t, "UpdateEmailForUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	contactViewRepo.AssertCalled(t, "UpdateContactForUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestDispatchEvent_EmailRemoved(t *testing.T) {
+func TestDispatchEvent_ContactRemoved(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
-	emailViewRepo.On("RemoveEmailFromUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	contactViewRepo.On("RemoveContactFromUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{
-		EventType: "email_removed",
-		Payload:   map[string]any{"user_id": 1, "address": "x@example.com"},
+		EventType: "contact_removed",
+		Payload:   map[string]any{"user_id": 1, "value": "x@example.com"},
 	}
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
 	require.NoError(t, err)
-	emailViewRepo.AssertCalled(t, "RemoveEmailFromUser", mock.Anything, mock.Anything, mock.Anything)
+	contactViewRepo.AssertCalled(t, "RemoveContactFromUser", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestDispatchEvent_UnknownType(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
-	emailViewRepo := new(mocks.MockEmailViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
-	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
 
 	event := &events.Event{EventType: "unknown_xyz", Payload: nil}
@@ -225,7 +225,7 @@ func TestDispatchEvent_UnknownType(t *testing.T) {
 	assert.NoError(t, err)
 	userViewRepo.AssertNotCalled(t, "CreateUserView")
 	userViewRepo.AssertNotCalled(t, "DeleteUserView")
-	emailViewRepo.AssertNotCalled(t, "AddEmailToUser")
+	contactViewRepo.AssertNotCalled(t, "AddContactToUser")
 	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
 }
 

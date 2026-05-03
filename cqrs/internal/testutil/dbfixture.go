@@ -20,10 +20,10 @@ type SeedData struct {
 	Users []*bunmodel.User `yaml:"users"`
 	// Messages are inserted after users.
 	Messages []*bunmodel.Message `yaml:"messages"`
-	// Emails are inserted before user-email links.
-	Emails []*bunmodel.Email `yaml:"emails"`
-	// UserEmails are inserted last.
-	UserEmails []*bunmodel.UserEmail `yaml:"user_emails"`
+	// Contacts are inserted before user-contact links.
+	Contacts []*bunmodel.Contact `yaml:"contacts"`
+	// UserContacts are inserted last.
+	UserContacts []*bunmodel.UserContact `yaml:"user_contacts"`
 }
 
 // LoadFixtures resets the CQRS PostgreSQL tables and inserts fixture rows from a YAML file.
@@ -52,7 +52,7 @@ func LoadFixtures(t *testing.T, db *bun.DB, path string) {
 func resetTables(ctx context.Context, db *bun.DB) error {
 	_, err := db.ExecContext(
 		ctx,
-		"TRUNCATE users_emails, emails, messages, users RESTART IDENTITY CASCADE",
+		"TRUNCATE users_contacts, contacts, messages, users RESTART IDENTITY CASCADE",
 	)
 	return err
 }
@@ -67,11 +67,11 @@ func insertFixtures(ctx context.Context, db *bun.DB, seed *SeedData) error {
 	if err := insertModels(ctx, db, seed.Messages); err != nil {
 		return fmt.Errorf("insert messages: %w", err)
 	}
-	if err := insertModels(ctx, db, seed.Emails); err != nil {
-		return fmt.Errorf("insert emails: %w", err)
+	if err := insertModels(ctx, db, seed.Contacts); err != nil {
+		return fmt.Errorf("insert contacts: %w", err)
 	}
-	if err := insertModels(ctx, db, seed.UserEmails); err != nil {
-		return fmt.Errorf("insert user_emails: %w", err)
+	if err := insertModels(ctx, db, seed.UserContacts); err != nil {
+		return fmt.Errorf("insert user_contacts: %w", err)
 	}
 	return nil
 }
@@ -124,21 +124,21 @@ func insertModels[T any](ctx context.Context, db *bun.DB, models []*T) error {
 			); err != nil {
 				return err
 			}
-		case *bunmodel.Email:
+		case *bunmodel.Contact:
 			if _, err := db.ExecContext(
 				ctx,
-				"INSERT INTO emails (id, email_address, created_at) VALUES (?, ?, ?)",
-				item.ID, item.Address, item.CreatedAt,
+				"INSERT INTO contacts (id, contact_value, created_at) VALUES (?, ?, ?)",
+				item.ID, item.Value, item.CreatedAt,
 			); err != nil {
 				return err
 			}
-		case *bunmodel.UserEmail:
+		case *bunmodel.UserContact:
 			if _, err := db.ExecContext(
 				ctx,
-				`INSERT INTO users_emails (
-					id, user_id, email_id, importance, category, created_at
+				`INSERT INTO users_contacts (
+					id, user_id, contact_id, importance, category, created_at
 				) VALUES (?, ?, ?, ?, ?, ?)`,
-				item.ID, item.UserID, item.EmailID, item.Importance, item.Category, item.CreatedAt,
+				item.ID, item.UserID, item.ContactID, item.Importance, item.Category, item.CreatedAt,
 			); err != nil {
 				return err
 			}

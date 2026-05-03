@@ -6,8 +6,8 @@ package service
 type SyncService struct {
 	// UserService handles user lifecycle events.
 	UserService *UserService
-	// EmailService handles email/contact events.
-	EmailService *EmailService
+	// ContactService handles contact events.
+	ContactService *ContactService
 	// MessageService handles message lifecycle events.
 	MessageService *MessageService
 }
@@ -15,12 +15,12 @@ type SyncService struct {
 // NewSyncService creates a SyncService from the provided domain services.
 func NewSyncService(
 	userService *UserService,
-	emailService *EmailService,
+	contactService *ContactService,
 	messageService *MessageService,
 ) *SyncService {
 	return &SyncService{
 		UserService:    userService,
-		EmailService:   emailService,
+		ContactService: contactService,
 		MessageService: messageService,
 	}
 }

@@ -19,10 +19,10 @@ type SeedData struct {
 	Users []*bunmodel.User `yaml:"users"`
 	// Messages seeds PostgreSQL messages.
 	Messages []*bunmodel.Message `yaml:"messages"`
-	// Emails seeds PostgreSQL emails.
-	Emails []*bunmodel.Email `yaml:"emails"`
-	// UserEmails seeds PostgreSQL user-email relations.
-	UserEmails []*bunmodel.UserEmail `yaml:"user_emails"`
+	// Contacts seeds PostgreSQL contacts.
+	Contacts []*bunmodel.Contact `yaml:"contacts"`
+	// UserContacts seeds PostgreSQL user-contact relations.
+	UserContacts []*bunmodel.UserContact `yaml:"user_contacts"`
 	// UserViews seeds MongoDB CQRS projections.
 	UserViews []*readmodel.UserView `yaml:"user_views"`
 }
@@ -66,18 +66,18 @@ func seedPostgres(ctx context.Context, db *bun.DB, seed *SeedData) error {
 			return fmt.Errorf("insert message %d: %w", message.ID, err)
 		}
 	}
-	for _, email := range seed.Emails {
-		if _, err := db.ExecContext(ctx, "INSERT INTO emails (id, email_address, created_at) VALUES (?, ?, ?)", email.ID, email.Address, email.CreatedAt); err != nil {
-			return fmt.Errorf("insert email %d: %w", email.ID, err)
+	for _, contact := range seed.Contacts {
+		if _, err := db.ExecContext(ctx, "INSERT INTO contacts (id, contact_value, created_at) VALUES (?, ?, ?)", contact.ID, contact.Value, contact.CreatedAt); err != nil {
+			return fmt.Errorf("insert contact %d: %w", contact.ID, err)
 		}
 	}
-	for _, item := range seed.UserEmails {
+	for _, item := range seed.UserContacts {
 		if _, err := db.ExecContext(ctx, `
-			INSERT INTO users_emails (id, user_id, email_id, importance, category, created_at)
+			INSERT INTO users_contacts (id, user_id, contact_id, importance, category, created_at)
 			VALUES (?, ?, ?, ?, ?, ?)`,
-			item.ID, item.UserID, item.EmailID, item.Importance, item.Category, item.CreatedAt,
+			item.ID, item.UserID, item.ContactID, item.Importance, item.Category, item.CreatedAt,
 		); err != nil {
-			return fmt.Errorf("insert user_email %d: %w", item.ID, err)
+			return fmt.Errorf("insert user_contact %d: %w", item.ID, err)
 		}
 	}
 	if _, err := db.ExecContext(ctx, "SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 1), true)"); err != nil {
@@ -86,11 +86,11 @@ func seedPostgres(ctx context.Context, db *bun.DB, seed *SeedData) error {
 	if _, err := db.ExecContext(ctx, "SELECT setval('messages_id_seq', COALESCE((SELECT MAX(id) FROM messages), 1), true)"); err != nil {
 		return fmt.Errorf("set messages sequence: %w", err)
 	}
-	if _, err := db.ExecContext(ctx, "SELECT setval('emails_id_seq', COALESCE((SELECT MAX(id) FROM emails), 1), true)"); err != nil {
-		return fmt.Errorf("set emails sequence: %w", err)
+	if _, err := db.ExecContext(ctx, "SELECT setval('contacts_id_seq', COALESCE((SELECT MAX(id) FROM contacts), 1), true)"); err != nil {
+		return fmt.Errorf("set contacts sequence: %w", err)
 	}
-	if _, err := db.ExecContext(ctx, "SELECT setval('users_emails_id_seq', COALESCE((SELECT MAX(id) FROM users_emails), 1), true)"); err != nil {
-		return fmt.Errorf("set users_emails sequence: %w", err)
+	if _, err := db.ExecContext(ctx, "SELECT setval('users_contacts_id_seq', COALESCE((SELECT MAX(id) FROM users_contacts), 1), true)"); err != nil {
+		return fmt.Errorf("set users_contacts sequence: %w", err)
 	}
 	return nil
 }

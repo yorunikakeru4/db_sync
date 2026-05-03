@@ -21,10 +21,10 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// TestIntegration_EmailAdded_FromPostgres inserts a user and email record into
+// TestIntegration_ContactAdded_FromPostgres inserts a user and contact record into
 // PostgreSQL, reads them back, constructs the event from the real DB values, and
 // asserts that MongoDB contains exactly those values.
-func TestIntegration_EmailAdded_FromPostgres(t *testing.T) {
+func TestIntegration_ContactAdded_FromPostgres(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	db.Reset(t)
 	ctx := context.Background()
@@ -36,26 +36,26 @@ func TestIntegration_EmailAdded_FromPostgres(t *testing.T) {
 		"alice@example.com",
 	).Scan(&userID))
 
-	var emailID int
+	var contactID int
 	require.NoError(t, db.PG.QueryRowContext(ctx,
-		`INSERT INTO emails (email_address, created_at) VALUES ($1, NOW()) RETURNING id`,
+		`INSERT INTO contacts (contact_value, created_at) VALUES ($1, NOW()) RETURNING id`,
 		"contact@work.com",
-	).Scan(&emailID))
+	).Scan(&contactID))
 
 	require.NoError(t, db.PG.QueryRowContext(ctx,
-		`INSERT INTO users_emails (user_id, email_id, importance, category, created_at)
+		`INSERT INTO users_contacts (user_id, contact_id, importance, category, created_at)
 		 VALUES ($1, $2, $3, $4, NOW()) RETURNING id`,
-		userID, emailID, 5, 1,
+		userID, contactID, 5, 1,
 	).Scan(new(int)))
 
 	// ── Read back from PostgreSQL (verify source data is there) ───────────────
 	var pgAddress string
 	var pgImportance int
 	require.NoError(t, db.PG.QueryRowContext(ctx,
-		`SELECT e.email_address, ue.importance
-		 FROM emails e
-		 JOIN users_emails ue ON ue.email_id = e.id
-		 WHERE ue.user_id = $1`, userID,
+		`SELECT c.contact_value, uc.importance
+		 FROM contacts c
+		 JOIN users_contacts uc ON uc.contact_id = c.id
+		 WHERE uc.user_id = $1`, userID,
 	).Scan(&pgAddress, &pgImportance))
 
 	assert.Equal(t, "contact@work.com", pgAddress)
@@ -65,10 +65,10 @@ func TestIntegration_EmailAdded_FromPostgres(t *testing.T) {
 	seedUser(t, db, userID, "alice@example.com")
 
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
-		EventType: "email_added",
+		EventType: "contact_added",
 		Payload: map[string]any{
 			"user_id":    userID,
-			"address":    pgAddress,    // from PG
+			"value":      pgAddress,    // from PG
 			"importance": pgImportance, // from PG
 			"category":   "work",
 		},
@@ -81,7 +81,7 @@ func TestIntegration_EmailAdded_FromPostgres(t *testing.T) {
 
 	require.Len(t, result.ImportantContacts, 1)
 	c := result.ImportantContacts[0]
-	assert.Equal(t, pgAddress, c.Email)       // Mongo == Postgres
+	assert.Equal(t, pgAddress, c.Value)         // Mongo == Postgres
 	assert.Equal(t, pgImportance, c.Importance) // Mongo == Postgres
 	assert.Equal(t, "work", c.Category)
 }

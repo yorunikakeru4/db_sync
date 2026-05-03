@@ -2,14 +2,14 @@ package events
 
 import "time"
 
-// EmailAddedPayload is the payload for an email_added event.
-type EmailAddedPayload struct {
-	// EmailID is the primary key of the email record.
-	EmailID int `json:"email_id"`
-	// UserID is the primary key of the user this email is associated with.
+// ContactAddedPayload is the payload for a contact_added event.
+type ContactAddedPayload struct {
+	// ContactID is the primary key of the contact record.
+	ContactID int `json:"contact_id"`
+	// UserID is the primary key of the user this contact is associated with.
 	UserID int `json:"user_id"`
-	// Address is the email address string.
-	Address string `json:"address"`
+	// Value is the contact value string.
+	Value string `json:"value"`
 	// Category is the user-assigned category label for this contact.
 	Category string `json:"category"`
 	// Importance is the user-assigned importance level.
@@ -18,14 +18,14 @@ type EmailAddedPayload struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// EmailUpdatedPayload is the payload for an email_updated event.
-type EmailUpdatedPayload struct {
-	// EmailID is the primary key of the email record.
-	EmailID int `json:"email_id"`
-	// Address is the email address string.
-	Address string `json:"address"`
-	// OldAddress is the email address string before the update.
-	OldAddress string `json:"old_address"`
+// ContactUpdatedPayload is the payload for a contact_updated event.
+type ContactUpdatedPayload struct {
+	// ContactID is the primary key of the contact record.
+	ContactID int `json:"contact_id"`
+	// Value is the contact value string.
+	Value string `json:"value"`
+	// OldValue is the contact value string before the update.
+	OldValue string `json:"old_value"`
 	// UserID is the primary key of the owning user.
 	UserID int `json:"user_id"`
 	// OldCategory is the category value before the update.
@@ -40,12 +40,12 @@ type EmailUpdatedPayload struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// EmailRemovedPayload is the payload for an email_removed event.
-type EmailRemovedPayload struct {
-	// EmailID is the primary key of the removed email record.
-	EmailID int `json:"email_id"`
-	// Address is the email address string that was removed.
-	Address string `json:"address"`
+// ContactRemovedPayload is the payload for a contact_removed event.
+type ContactRemovedPayload struct {
+	// ContactID is the primary key of the removed contact record.
+	ContactID int `json:"contact_id"`
+	// Value is the contact value string that was removed.
+	Value string `json:"value"`
 	// UserID is the primary key of the owning user.
 	UserID int `json:"user_id"`
 }

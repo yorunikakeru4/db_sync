@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { createEmail, getEmailsByUserId } from '../api/emails'
+import { createContact, getContactsByUserId } from '../api/contacts'
 import DataTable from '../components/DataTable.vue'
 import DetailCard from '../components/DetailCard.vue'
 import ErrorAlert from '../components/ErrorAlert.vue'
@@ -8,7 +8,7 @@ import FormSection from '../components/FormSection.vue'
 
 const createForm = reactive({
   user_id: '',
-  address: '',
+  value: '',
   category: '',
   importance: 0,
 })
@@ -27,12 +27,12 @@ async function handleCreate() {
   errorMessage.value = null
 
   try {
-    created.value = await createEmail({
+    created.value = await createContact({
       ...createForm,
       importance: Number(createForm.importance),
     })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Create email failed'
+    errorMessage.value = error instanceof Error ? error.message : 'Create contact failed'
   } finally {
     loading.value = false
   }
@@ -43,9 +43,9 @@ async function handleGet() {
   errorMessage.value = null
 
   try {
-    rows.value = await getEmailsByUserId(getForm.user_id)
+    rows.value = await getContactsByUserId(getForm.user_id)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Get emails failed'
+    errorMessage.value = error instanceof Error ? error.message : 'Get contacts failed'
   } finally {
     loading.value = false
   }
@@ -54,17 +54,17 @@ async function handleGet() {
 
 <template>
   <section class="page-grid">
-    <FormSection title="Create email link" description="Привязка email к пользователю.">
+    <FormSection title="Create contact link" description="Привязка контакта к пользователю.">
       <form class="form-grid" @submit.prevent="handleCreate">
         <label class="field"><span>User ID</span><input v-model="createForm.user_id" required /></label>
-        <label class="field"><span>Address</span><input v-model="createForm.address" type="email" required /></label>
+        <label class="field"><span>Value</span><input v-model="createForm.value" required /></label>
         <label class="field"><span>Category</span><input v-model="createForm.category" required /></label>
         <label class="field"><span>Importance</span><input v-model="createForm.importance" type="number" min="0" required /></label>
         <button class="button" :disabled="loading">Create</button>
       </form>
     </FormSection>
 
-    <FormSection title="Get emails" description="Чтение email-связей пользователя.">
+    <FormSection title="Get contacts" description="Чтение контактных связей пользователя.">
       <form class="form-grid" @submit.prevent="handleGet">
         <label class="field"><span>User ID</span><input v-model="getForm.user_id" required /></label>
         <button class="button" :disabled="loading">Get</button>

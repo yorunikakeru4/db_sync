@@ -41,14 +41,14 @@ type MessageStore interface {
 	DeleteMessage(ctx context.Context, id int64) (*bunmodel.Message, error)
 }
 
-// EmailStore persists email and user-email mutations.
-type EmailStore interface {
-	// AddUserEmail creates or reuses an email and links it to a user.
-	AddUserEmail(ctx context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) error
-	// UpdateUserEmail updates both the email row and association metadata.
-	UpdateUserEmail(ctx context.Context, userEmail *bunmodel.UserEmail, email *bunmodel.Email) (*backendstorage.EmailUpdateSnapshot, error)
-	// DeleteUserEmail removes the user-email link and returns the deleted state.
-	DeleteUserEmail(ctx context.Context, userID, emailID int64) (*backendstorage.DeletedUserEmail, error)
+// ContactStore persists contact and user-contact mutations.
+type ContactStore interface {
+	// AddUserContact creates or reuses a contact and links it to a user.
+	AddUserContact(ctx context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) error
+	// UpdateUserContact updates both the contact row and association metadata.
+	UpdateUserContact(ctx context.Context, userContact *bunmodel.UserContact, contact *bunmodel.Contact) (*backendstorage.ContactUpdateSnapshot, error)
+	// DeleteUserContact removes the user-contact link and returns the deleted state.
+	DeleteUserContact(ctx context.Context, userID, contactID int64) (*backendstorage.DeletedUserContact, error)
 }
 
 // HandlerParams contains handler dependencies.
@@ -59,8 +59,8 @@ type HandlerParams struct {
 	Users UserStore
 	// Messages persists message mutations.
 	Messages MessageStore
-	// Emails persists email mutations.
-	Emails EmailStore
+	// Contacts persists contact mutations.
+	Contacts ContactStore
 	// UserViews reads CQRS user projections.
 	UserViews UserViewStore
 }
@@ -70,7 +70,7 @@ type Handler struct {
 	producer kafka.Producer
 	users    UserStore
 	messages MessageStore
-	emails   EmailStore
+	contacts ContactStore
 	userViews UserViewStore
 	router   *bunrouter.Router
 }
@@ -86,8 +86,8 @@ func NewHandler(params HandlerParams) (*Handler, error) {
 	if params.Messages == nil {
 		return nil, errors.New("message store is required")
 	}
-	if params.Emails == nil {
-		return nil, errors.New("email store is required")
+	if params.Contacts == nil {
+		return nil, errors.New("contact store is required")
 	}
 	if params.UserViews == nil {
 		return nil, errors.New("user view store is required")
@@ -97,13 +97,13 @@ func NewHandler(params HandlerParams) (*Handler, error) {
 		producer: params.Producer,
 		users:    params.Users,
 		messages: params.Messages,
-		emails:   params.Emails,
+		contacts: params.Contacts,
 		userViews: params.UserViews,
 		router:   bunrouter.New(),
 	}
 	h.registerUserRoutes()
 	h.registerMessageRoutes()
-	h.registerEmailRoutes()
+	h.registerContactRoutes()
 	return h, nil
 }
 

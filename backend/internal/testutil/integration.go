@@ -65,7 +65,7 @@ func (db *TestDB) Reset(t *testing.T) {
 	t.Helper()
 
 	ctx := context.Background()
-	if _, err := db.PG.ExecContext(ctx, "TRUNCATE users_emails, emails, messages, users RESTART IDENTITY CASCADE"); err != nil {
+	if _, err := db.PG.ExecContext(ctx, "TRUNCATE users_contacts, contacts, messages, users RESTART IDENTITY CASCADE"); err != nil {
 		t.Fatalf("backend testutil: truncate postgres: %v", err)
 	}
 	if err := db.Mongo.Collection("users").Drop(ctx); err != nil && !isMongoNamespaceMissing(err) {

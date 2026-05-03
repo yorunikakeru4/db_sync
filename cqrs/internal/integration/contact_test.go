@@ -19,17 +19,17 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func TestIntegration_EmailAdded(t *testing.T) {
+func TestIntegration_ContactAdded(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	db.Reset(t)
 	ctx := context.Background()
 	seedUser(t, db, 1, "alice@example.com")
 
 	event := &events.Event{
-		EventType: "email_added",
+		EventType: "contact_added",
 		Payload: map[string]any{
 			"user_id":    1,
-			"address":    "contact@work.com",
+			"value":      "contact@work.com",
 			"category":   "work",
 			"importance": 5,
 		},
@@ -42,29 +42,29 @@ func TestIntegration_EmailAdded(t *testing.T) {
 
 	require.Len(t, result.ImportantContacts, 1)
 	c := result.ImportantContacts[0]
-	assert.Equal(t, "contact@work.com", c.Email)
+	assert.Equal(t, "contact@work.com", c.Value)
 	assert.Equal(t, "work", c.Category)
 	assert.Equal(t, 5, c.Importance)
 }
 
-func TestIntegration_EmailUpdated(t *testing.T) {
+func TestIntegration_ContactUpdated(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	db.Reset(t)
 	ctx := context.Background()
 	seedUser(t, db, 1, "alice@example.com")
 
 	// Seed an existing contact.
-	emailRepo := storage.NewMongoEmailViewRepository(db.Mongo)
-	require.NoError(t, emailRepo.AddEmailToUser(ctx, 1, view.ImportantContactView{
-		Email: "contact@work.com", Category: "personal", Importance: 1,
+	contactRepo := storage.NewMongoContactViewRepository(db.Mongo)
+	require.NoError(t, contactRepo.AddContactToUser(ctx, 1, view.ImportantContactView{
+		Value: "contact@work.com", Category: "personal", Importance: 1,
 	}))
 
 	event := &events.Event{
-		EventType: "email_updated",
+		EventType: "contact_updated",
 		Payload: map[string]any{
 			"user_id":        1,
-			"address":        "updated@work.com",
-			"old_address":    "contact@work.com",
+			"value":          "updated@work.com",
+			"old_value":      "contact@work.com",
 			"old_category":   "personal",
 			"new_category":   "vip",
 			"old_importance": 1,
@@ -79,28 +79,28 @@ func TestIntegration_EmailUpdated(t *testing.T) {
 
 	require.Len(t, result.ImportantContacts, 1)
 	c := result.ImportantContacts[0]
-	assert.Equal(t, "updated@work.com", c.Email)
+	assert.Equal(t, "updated@work.com", c.Value)
 	assert.Equal(t, "vip", c.Category)
 	assert.Equal(t, 10, c.Importance)
 }
 
-func TestIntegration_EmailRemoved(t *testing.T) {
+func TestIntegration_ContactRemoved(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	db.Reset(t)
 	ctx := context.Background()
 	seedUser(t, db, 1, "alice@example.com")
 
 	// Seed a contact to be removed.
-	emailRepo := storage.NewMongoEmailViewRepository(db.Mongo)
-	require.NoError(t, emailRepo.AddEmailToUser(ctx, 1, view.ImportantContactView{
-		Email: "contact@work.com", Category: "work", Importance: 3,
+	contactRepo := storage.NewMongoContactViewRepository(db.Mongo)
+	require.NoError(t, contactRepo.AddContactToUser(ctx, 1, view.ImportantContactView{
+		Value: "contact@work.com", Category: "work", Importance: 3,
 	}))
 
 	event := &events.Event{
-		EventType: "email_removed",
+		EventType: "contact_removed",
 		Payload: map[string]any{
 			"user_id": 1,
-			"address": "contact@work.com",
+			"value":   "contact@work.com",
 		},
 	}
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, event, buildSyncSvc(db))
@@ -111,16 +111,16 @@ func TestIntegration_EmailRemoved(t *testing.T) {
 	assert.Empty(t, result.ImportantContacts)
 }
 
-func TestIntegration_EmailAdded_UserNotFound(t *testing.T) {
+func TestIntegration_ContactAdded_UserNotFound(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	db.Reset(t)
 	ctx := context.Background()
 
 	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
-		EventType: "email_added",
+		EventType: "contact_added",
 		Payload: map[string]any{
 			"user_id":    999,
-			"address":    "ghost@example.com",
+			"value":      "ghost@example.com",
 			"category":   "work",
 			"importance": 1,
 		},

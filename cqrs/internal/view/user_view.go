@@ -12,7 +12,7 @@ type UserView struct {
 	Email string `bson:"email"`
 	// NumMessages is the total number of messages associated with the user.
 	NumMessages int `bson:"num_messages"`
-	// ImportantContacts is the list of email contacts marked as important.
+	// ImportantContacts is the list of contacts marked as important.
 	ImportantContacts []ImportantContactView `bson:"important_contacts"`
 	// Messages is the list of message summaries for this user.
 	Messages []MessageView `bson:"messages"`
@@ -22,8 +22,8 @@ type UserView struct {
 
 // ImportantContactView is an embedded sub-document representing a single important contact.
 type ImportantContactView struct {
-	// Email is the contact's email address.
-	Email string `bson:"email"`
+	// Value is the contact value.
+	Value string `bson:"value"`
 	// Category is the user-assigned category label for this contact.
 	Category string `bson:"category"`
 	// Importance is the user-assigned importance level for this contact.

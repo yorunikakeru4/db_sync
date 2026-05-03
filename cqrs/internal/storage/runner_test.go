@@ -29,7 +29,7 @@ func TestStorageDatadriven(t *testing.T) {
 	runner := &storageRunner{
 		users:    NewPostgresUserRepository(pg.PG),
 		messages: NewPostgresMessageRepository(pg.PG),
-		emails:   NewPostgresEmailRepository(pg.PG),
+		contacts: NewPostgresContactRepository(pg.PG),
 		bundb:    bundb,
 	}
 
@@ -44,7 +44,7 @@ func TestStorageDatadriven(t *testing.T) {
 type storageRunner struct {
 	users    *PostgresUserRepository
 	messages *PostgresMessageRepository
-	emails   *PostgresEmailRepository
+	contacts *PostgresContactRepository
 	bundb    *bun.DB
 }
 
@@ -68,7 +68,7 @@ func (r *storageRunner) run(t *testing.T, tc *datadriven.TestCase) string {
 		return mustYAML(t, userOutput{
 			ID:              user.ID,
 			Email:           user.Email,
-			ImportantEmails: user.ImportantEmails,
+			ImportantContacts: user.ImportantContacts,
 			Messages:        user.Messages,
 			CreatedAt:       formatTime(user.CreatedAt),
 		})
@@ -90,22 +90,22 @@ func (r *storageRunner) run(t *testing.T, tc *datadriven.TestCase) string {
 			items = append(items, renderMessage(&msgs[i]))
 		}
 		return mustYAML(t, items)
-	case "get-email":
+	case "get-contact":
 		id := scanIntArg(t, tc, "id")
-		email, err := r.emails.GetEmailByID(id)
+		contact, err := r.contacts.GetContactByID(id)
 		if err != nil {
-			tc.Fatalf(t, "get email: %v", err)
+			tc.Fatalf(t, "get contact: %v", err)
 		}
-		return mustYAML(t, renderEmail(email))
-	case "list-user-emails":
+		return mustYAML(t, renderContact(contact))
+	case "list-user-contacts":
 		userID := scanIntArg(t, tc, "user_id")
-		items, err := r.emails.GetEmailsByUserID(userID)
+		items, err := r.contacts.GetContactsByUserID(userID)
 		if err != nil {
-			tc.Fatalf(t, "list user emails: %v", err)
+			tc.Fatalf(t, "list user contacts: %v", err)
 		}
-		result := make([]userEmailOutput, 0, len(items))
+		result := make([]userContactOutput, 0, len(items))
 		for i := range items {
-			result = append(result, renderUserEmail(&items[i]))
+			result = append(result, renderUserContact(&items[i]))
 		}
 		return mustYAML(t, result)
 	default:
@@ -151,19 +151,19 @@ func renderMessage(msg *domain.Message) messageOutput {
 	}
 }
 
-func renderEmail(email *domain.Email) emailOutput {
-	return emailOutput{
-		ID:        email.ID,
-		Address:   email.Address,
-		CreatedAt: formatTime(email.CreatedAt),
+func renderContact(contact *domain.Contact) contactOutput {
+	return contactOutput{
+		ID:        contact.ID,
+		Address:   contact.Value,
+		CreatedAt: formatTime(contact.CreatedAt),
 	}
 }
 
-func renderUserEmail(item *domain.UserEmail) userEmailOutput {
-	return userEmailOutput{
+func renderUserContact(item *domain.UserContact) userContactOutput {
+	return userContactOutput{
 		ID:         item.ID,
 		UserID:     item.UserID,
-		EmailID:    item.EmailID,
+		ContactID:  item.ContactID,
 		Importance: item.Importance,
 		Category:   item.Category,
 		CreatedAt:  formatTime(item.CreatedAt),
@@ -175,11 +175,11 @@ func formatTime(value time.Time) string {
 }
 
 type userOutput struct {
-	ID              int              `yaml:"id"`
-	Email           string           `yaml:"email"`
-	ImportantEmails []models.Email   `yaml:"important_emails"`
-	Messages        []models.Message `yaml:"messages"`
-	CreatedAt       string           `yaml:"created_at"`
+	ID                int                `yaml:"id"`
+	Email             string             `yaml:"email"`
+	ImportantContacts []models.Contact   `yaml:"important_contacts"`
+	Messages          []models.Message   `yaml:"messages"`
+	CreatedAt         string             `yaml:"created_at"`
 }
 
 type messageOutput struct {
@@ -193,16 +193,16 @@ type messageOutput struct {
 	CreatedAt  string `yaml:"created_at"`
 }
 
-type emailOutput struct {
+type contactOutput struct {
 	ID        int    `yaml:"id"`
 	Address   string `yaml:"address"`
 	CreatedAt string `yaml:"created_at"`
 }
 
-type userEmailOutput struct {
+type userContactOutput struct {
 	ID         int    `yaml:"id"`
 	UserID     int    `yaml:"user_id"`
-	EmailID    int    `yaml:"email_id"`
+	ContactID  int    `yaml:"contact_id"`
 	Importance int    `yaml:"importance"`
 	Category   int    `yaml:"category"`
 	CreatedAt  string `yaml:"created_at"`

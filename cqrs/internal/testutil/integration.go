@@ -76,13 +76,13 @@ func NewTestDB(t *testing.T) *TestDB {
 }
 
 // Reset wipes all test data: truncates the PostgreSQL users table (cascades to
-// messages and emails) and drops the MongoDB users collection.
+// messages and contacts) and drops the MongoDB users collection.
 // Call at the start of each test for a clean slate.
 func (db *TestDB) Reset(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
 
-	if _, err := db.PG.ExecContext(ctx, "TRUNCATE users, emails CASCADE"); err != nil {
+	if _, err := db.PG.ExecContext(ctx, "TRUNCATE users, contacts CASCADE"); err != nil {
 		t.Fatalf("testutil: truncate users: %v", err)
 	}
 	if err := db.Mongo.Collection("users").Drop(ctx); err != nil {

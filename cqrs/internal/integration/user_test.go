@@ -90,7 +90,7 @@ func buildSyncSvc(db *testutil.TestDB) *service.SyncService {
 			storage.NewPostgresUserRepository(db.PG),
 			storage.NewMongoUserViewRepository(db.Mongo),
 		),
-		service.NewEmailService(storage.NewMongoEmailViewRepository(db.Mongo)),
+		service.NewContactService(storage.NewMongoContactViewRepository(db.Mongo)),
 		service.NewMessageService(storage.NewMongoMessageViewRepository(db.Mongo)),
 	)
 }

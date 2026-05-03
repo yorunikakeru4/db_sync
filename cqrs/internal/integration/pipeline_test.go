@@ -17,7 +17,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// TestIntegration_FullPipeline fires user_created → email_added → message_added
+// TestIntegration_FullPipeline fires user_created → contact_added → message_added
 // in sequence and verifies the entire MongoDB document at the end.
 func TestIntegration_FullPipeline(t *testing.T) {
 	db := testutil.NewTestDB(t)
@@ -37,9 +37,9 @@ func TestIntegration_FullPipeline(t *testing.T) {
 
 	// Step 2: add an important contact.
 	err = consumer.DispatchEvent(ctx, &events.Event{
-		EventType: "email_added",
+		EventType: "contact_added",
 		Payload: map[string]any{
-			"user_id": 1, "address": "boss@work.com",
+			"user_id": 1, "value": "boss@work.com",
 			"category": "vip", "importance": 10,
 		},
 	}, syncSvc)
@@ -65,7 +65,7 @@ func TestIntegration_FullPipeline(t *testing.T) {
 
 	require.Len(t, result.ImportantContacts, 1)
 	c := result.ImportantContacts[0]
-	assert.Equal(t, "boss@work.com", c.Email)
+	assert.Equal(t, "boss@work.com", c.Value)
 	assert.Equal(t, "vip", c.Category)
 	assert.Equal(t, 10, c.Importance)
 

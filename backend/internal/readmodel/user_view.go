@@ -21,8 +21,8 @@ type UserView struct {
 
 // ImportantContactView is the embedded contact sub-document.
 type ImportantContactView struct {
-	// Email is the contact address.
-	Email string `bson:"email" json:"email"`
+	// Value is the contact value.
+	Value string `bson:"value" json:"value"`
 	// Category is the contact category.
 	Category string `bson:"category" json:"category"`
 	// Importance is the contact importance.

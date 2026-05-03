@@ -6,7 +6,7 @@ const route = useRoute()
 const tabs = [
   { to: '/users', label: 'Users' },
   { to: '/messages', label: 'Messages' },
-  { to: '/emails', label: 'Emails' },
+  { to: '/contacts', label: 'Contacts' },
   { to: '/requests', label: 'Requests' },
 ]
 

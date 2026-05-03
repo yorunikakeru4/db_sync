@@ -34,20 +34,20 @@ CREATE TABLE IF NOT EXISTS message_statuses (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS emails (
+CREATE TABLE IF NOT EXISTS contacts (
     id            SERIAL PRIMARY KEY,
-    email_address VARCHAR(255) UNIQUE NOT NULL,
+    contact_value VARCHAR(255) UNIQUE NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS users_emails (
+CREATE TABLE IF NOT EXISTS users_contacts (
     id         SERIAL PRIMARY KEY,
     user_id    INTEGER     NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
-    email_id   INTEGER     NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+    contact_id INTEGER     NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
     importance INTEGER     NOT NULL DEFAULT 0,
     category   INTEGER     NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, email_id)
+    UNIQUE (user_id, contact_id)
 );
 
 -- Indices
@@ -56,10 +56,10 @@ CREATE INDEX IF NOT EXISTS idx_messages_receiver_id     ON messages(receiver_id)
 CREATE INDEX IF NOT EXISTS idx_messages_date_sent       ON messages(date_sent);
 CREATE INDEX IF NOT EXISTS idx_message_files_message_id ON message_files(message_id);
 CREATE INDEX IF NOT EXISTS idx_message_statuses_msg_id  ON message_statuses(message_id);
-CREATE INDEX IF NOT EXISTS idx_emails_address           ON emails(email_address);
-CREATE INDEX IF NOT EXISTS idx_users_emails_user_id     ON users_emails(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_emails_email_id    ON users_emails(email_id);
-CREATE INDEX IF NOT EXISTS idx_users_emails_importance  ON users_emails(importance);
+CREATE INDEX IF NOT EXISTS idx_contacts_value            ON contacts(contact_value);
+CREATE INDEX IF NOT EXISTS idx_users_contacts_user_id    ON users_contacts(user_id);
+CREATE INDEX IF NOT EXISTS idx_users_contacts_contact_id ON users_contacts(contact_id);
+CREATE INDEX IF NOT EXISTS idx_users_contacts_importance ON users_contacts(importance);
 
 -- ── Audit log (populated by trigger, not by the application) ─────────────────
 
@@ -102,9 +102,9 @@ CREATE OR REPLACE TRIGGER trg_message_statuses_updated_at
     BEFORE UPDATE ON message_statuses
     FOR EACH ROW EXECUTE FUNCTION trg_fn_message_statuses_updated_at();
 
--- 3. Clamp users_emails.importance to [0, 10] on every write.
+-- 3. Clamp users_contacts.importance to [0, 10] on every write.
 --    Enforces the domain invariant at the DB level regardless of caller.
-CREATE OR REPLACE FUNCTION trg_fn_users_emails_clamp_importance()
+CREATE OR REPLACE FUNCTION trg_fn_users_contacts_clamp_importance()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
     NEW.importance := GREATEST(0, LEAST(10, NEW.importance));
@@ -112,9 +112,9 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE TRIGGER trg_users_emails_clamp_importance
-    BEFORE INSERT OR UPDATE ON users_emails
-    FOR EACH ROW EXECUTE FUNCTION trg_fn_users_emails_clamp_importance();
+CREATE OR REPLACE TRIGGER trg_users_contacts_clamp_importance
+    BEFORE INSERT OR UPDATE ON users_contacts
+    FOR EACH ROW EXECUTE FUNCTION trg_fn_users_contacts_clamp_importance();
 
 -- 4. Prevent a user from sending a message to themselves.
 --    A domain rule that belongs in the DB, not scattered across services.

@@ -41,16 +41,16 @@ func Run() {
 	userRepo := storage.NewPostgresUserRepository(pg)
 
 	userViewRepo := storage.NewMongoUserViewRepository(mongoDB)
-	emailViewRepo := storage.NewMongoEmailViewRepository(mongoDB)
+	contactViewRepo := storage.NewMongoContactViewRepository(mongoDB)
 	messageViewRepo := storage.NewMongoMessageViewRepository(mongoDB)
 	// Services
 	userService := service.NewUserService(userRepo, userViewRepo)
-	emailService := service.NewEmailService(emailViewRepo)
+	contactService := service.NewContactService(contactViewRepo)
 	messageService := service.NewMessageService(messageViewRepo)
 
 	syncService := service.NewSyncService(
 		userService,
-		emailService,
+		contactService,
 		messageService,
 	)
 

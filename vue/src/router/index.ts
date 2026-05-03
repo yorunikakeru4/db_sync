@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import UsersView from '../views/UsersView.vue'
 import MessagesView from '../views/MessagesView.vue'
-import EmailsView from '../views/EmailsView.vue'
+import ContactsView from '../views/ContactsView.vue'
 import RequestsView from '../views/RequestsView.vue'
 
 const router = createRouter({
@@ -10,7 +10,7 @@ const router = createRouter({
     { path: '/', redirect: '/users' },
     { path: '/users', component: UsersView },
     { path: '/messages', component: MessagesView },
-    { path: '/emails', component: EmailsView },
+    { path: '/contacts', component: ContactsView },
     { path: '/requests', component: RequestsView },
   ],
 })

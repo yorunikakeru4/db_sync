@@ -73,12 +73,12 @@ func (r *MongoUserViewRepository) GetUserViewByID(ctx context.Context, id int) (
 	if err != nil {
 		return nil, err
 	}
-	importantEmails := mapper.MapImportantContacts(userView.ImportantContacts)
+	importantContacts := mapper.MapImportantContacts(userView.ImportantContacts)
 	return &models.User{
-		ID:              userView.ID,
-		Email:           userView.Email,
-		ImportantEmails: importantEmails,
-		CreatedAt:       userView.CreatedAt,
+		ID:                userView.ID,
+		Email:             userView.Email,
+		ImportantContacts: importantContacts,
+		CreatedAt:         userView.CreatedAt,
 	}, nil
 }
 

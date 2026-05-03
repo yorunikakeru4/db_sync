@@ -11,9 +11,9 @@
 - обработка событий:
   - `user_created`
   - `user_deleted`
-  - `email_added`
-  - `email_updated`
-  - `email_removed`
+  - `contact_added`
+  - `contact_updated`
+  - `contact_removed`
   - `message_created`
   - `message_deleted`
 - unit-тесты для сервисов, middleware и dispatch-роутинга

@@ -1,24 +1,24 @@
 import { apiConfig } from './config'
 import { requestJson } from './http'
 
-export interface CreateEmailInput {
+export interface CreateContactInput {
   user_id: string
-  address: string
+  value: string
   category: string
   importance: number
 }
 
-export function createEmail(input: CreateEmailInput) {
+export function createContact(input: CreateContactInput) {
   return requestJson<Record<string, unknown>>({
     method: 'POST',
-    url: apiConfig.emails.create(),
+    url: apiConfig.contacts.create(),
     body: input,
   })
 }
 
-export function getEmailsByUserId(userId: string) {
+export function getContactsByUserId(userId: string) {
   return requestJson<Record<string, unknown>[]>({
     method: 'GET',
-    url: apiConfig.emails.getByUserId(userId),
+    url: apiConfig.contacts.getByUserId(userId),
   })
 }

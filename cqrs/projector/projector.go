@@ -22,7 +22,7 @@ func ProjectJSONEvent(ctx context.Context, db *mongo.Database, body []byte) erro
 
 	syncService := service.NewSyncService(
 		service.NewUserService(nil, storage.NewMongoUserViewRepository(db)),
-		service.NewEmailService(storage.NewMongoEmailViewRepository(db)),
+		service.NewContactService(storage.NewMongoContactViewRepository(db)),
 		service.NewMessageService(storage.NewMongoMessageViewRepository(db)),
 	)
 

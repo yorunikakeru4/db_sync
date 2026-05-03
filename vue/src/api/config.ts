@@ -10,8 +10,8 @@ export const apiConfig = {
     create: () => `${baseUrl}/messages`,
     get: (value: string | number) => `${baseUrl}/messages/${value}`,
   },
-  emails: {
-    create: () => `${baseUrl}/emails`,
-    getByUserId: (userId: string | number) => `${baseUrl}/users/${userId}/emails`,
+  contacts: {
+    create: () => `${baseUrl}/contacts`,
+    getByUserId: (userId: string | number) => `${baseUrl}/users/${userId}/contacts`,
   },
 }

@@ -13,18 +13,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHandleEmailAddedToUser(t *testing.T) {
+func TestHandleContactAddedToUser(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload events.EmailAddedPayload
+		payload events.ContactAddedPayload
 		repoErr error
 		wantErr bool
 	}{
 		{
 			name: "success",
-			payload: events.EmailAddedPayload{
+			payload: events.ContactAddedPayload{
 				UserID:     1,
-				Address:    "contact@example.com",
+				Value:      "contact@example.com",
 				Category:   "work",
 				Importance: 3,
 			},
@@ -33,9 +33,9 @@ func TestHandleEmailAddedToUser(t *testing.T) {
 		},
 		{
 			name: "repo error propagated",
-			payload: events.EmailAddedPayload{
+			payload: events.ContactAddedPayload{
 				UserID:     2,
-				Address:    "other@example.com",
+				Value:      "other@example.com",
 				Category:   "personal",
 				Importance: 1,
 			},
@@ -46,16 +46,16 @@ func TestHandleEmailAddedToUser(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			repo := new(mocks.MockEmailViewRepository)
+			repo := new(mocks.MockContactViewRepository)
 			expected := view.ImportantContactView{
-				Email:      tc.payload.Address,
+				Value:      tc.payload.Value,
 				Category:   tc.payload.Category,
 				Importance: tc.payload.Importance,
 			}
-			repo.On("AddEmailToUser", context.Background(), tc.payload.UserID, expected).Return(tc.repoErr)
+			repo.On("AddContactToUser", context.Background(), tc.payload.UserID, expected).Return(tc.repoErr)
 
-			svc := NewEmailService(repo)
-			err := svc.HandleEmailAddedToUser(context.Background(), tc.payload)
+			svc := NewContactService(repo)
+			err := svc.HandleContactAddedToUser(context.Background(), tc.payload)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -68,19 +68,19 @@ func TestHandleEmailAddedToUser(t *testing.T) {
 	}
 }
 
-func TestHandleEmailUpdatedForUser(t *testing.T) {
+func TestHandleContactUpdatedForUser(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload events.EmailUpdatedPayload
+		payload events.ContactUpdatedPayload
 		repoErr error
 		wantErr bool
 	}{
 		{
 			name: "success — uses NewCategory and NewImportance",
-			payload: events.EmailUpdatedPayload{
+			payload: events.ContactUpdatedPayload{
 				UserID:        1,
-				Address:       "contact@example.com",
-				OldAddress:    "before@example.com",
+				Value:         "contact@example.com",
+				OldValue:      "before@example.com",
 				OldCategory:   "personal",
 				NewCategory:   "work",
 				OldImportance: 1,
@@ -91,10 +91,10 @@ func TestHandleEmailUpdatedForUser(t *testing.T) {
 		},
 		{
 			name: "repo error propagated",
-			payload: events.EmailUpdatedPayload{
+			payload: events.ContactUpdatedPayload{
 				UserID:        3,
-				Address:       "x@example.com",
-				OldAddress:    "old-x@example.com",
+				Value:         "x@example.com",
+				OldValue:      "old-x@example.com",
 				NewCategory:   "vip",
 				NewImportance: 10,
 			},
@@ -105,16 +105,16 @@ func TestHandleEmailUpdatedForUser(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			repo := new(mocks.MockEmailViewRepository)
+			repo := new(mocks.MockContactViewRepository)
 			expected := view.ImportantContactView{
-				Email:      tc.payload.Address,
+				Value:      tc.payload.Value,
 				Category:   tc.payload.NewCategory,
 				Importance: tc.payload.NewImportance,
 			}
-			repo.On("UpdateEmailForUser", context.Background(), tc.payload.UserID, tc.payload.OldAddress, expected).Return(tc.repoErr)
+			repo.On("UpdateContactForUser", context.Background(), tc.payload.UserID, tc.payload.OldValue, expected).Return(tc.repoErr)
 
-			svc := NewEmailService(repo)
-			err := svc.HandleEmailUpdatedForUser(context.Background(), tc.payload)
+			svc := NewContactService(repo)
+			err := svc.HandleContactUpdatedForUser(context.Background(), tc.payload)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -127,22 +127,22 @@ func TestHandleEmailUpdatedForUser(t *testing.T) {
 	}
 }
 
-func TestHandleEmailRemovedFromUser(t *testing.T) {
+func TestHandleContactRemovedFromUser(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload events.EmailRemovedPayload
+		payload events.ContactRemovedPayload
 		repoErr error
 		wantErr bool
 	}{
 		{
 			name:    "success",
-			payload: events.EmailRemovedPayload{UserID: 1, Address: "old@example.com"},
+			payload: events.ContactRemovedPayload{UserID: 1, Value: "old@example.com"},
 			repoErr: nil,
 			wantErr: false,
 		},
 		{
 			name:    "repo error propagated",
-			payload: events.EmailRemovedPayload{UserID: 2, Address: "gone@example.com"},
+			payload: events.ContactRemovedPayload{UserID: 2, Value: "gone@example.com"},
 			repoErr: errors.New("pull failed"),
 			wantErr: true,
 		},
@@ -150,11 +150,11 @@ func TestHandleEmailRemovedFromUser(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			repo := new(mocks.MockEmailViewRepository)
-			repo.On("RemoveEmailFromUser", context.Background(), tc.payload.UserID, tc.payload.Address).Return(tc.repoErr)
+			repo := new(mocks.MockContactViewRepository)
+			repo.On("RemoveContactFromUser", context.Background(), tc.payload.UserID, tc.payload.Value).Return(tc.repoErr)
 
-			svc := NewEmailService(repo)
-			err := svc.HandleEmailRemovedFromUser(context.Background(), tc.payload)
+			svc := NewContactService(repo)
+			err := svc.HandleContactRemovedFromUser(context.Background(), tc.payload)
 
 			if tc.wantErr {
 				require.Error(t, err)

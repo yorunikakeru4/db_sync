@@ -1,7 +1,6 @@
 version: "3"
 
 tasks:
-  # ── Bootstrap ─────────────────────────────────────────────────────────────────
   init:
     desc: "Create .env from .env.example (skips if .env already exists)"
     cmds:
@@ -10,9 +9,8 @@ tasks:
     status:
       - test -f .env
 
-  # ── Infrastructure ────────────────────────────────────────────────────────────
   up:
-    desc: "Start all infrastructure services (default: podman)"
+    desc: "Start shared infrastructure (default: podman)"
     cmds:
       - task: up:podman
 
@@ -25,9 +23,9 @@ tasks:
     desc: "Start PostgreSQL, MongoDB and Kafka with docker compose"
     cmds:
       - docker compose up -d
-    
+
   down:
-    desc: "Stop all infrastructure services (default: podman)" 
+    desc: "Stop shared infrastructure (default: podman)"
     cmds:
       - task: down:podman
 
@@ -39,47 +37,38 @@ tasks:
     cmds:
       - sudo docker compose down
 
-  # ── Dependencies ──────────────────────────────────────────────────────────────
-  deps:
-    desc: "Download and tidy Go module dependencies"
+  cqrs:deps:
+    desc: "Download and tidy CQRS module dependencies"
+    dir: cqrs
     cmds:
-      - go mod download
-      - go mod tidy
+      - task deps
 
-  # ── Build & Run ───────────────────────────────────────────────────────────────
-  build:
-    desc: "Build the db_sync binary"
+  cqrs:build:
+    desc: "Build the CQRS sync service"
+    dir: cqrs
     cmds:
-      - go build -o db_sync ./cmd/db_sync/...
-    sources:
-      - "**/*.go"
-      - go.mod
-      - go.sum
-    generates:
-      - db_sync
+      - task build
 
-  run:
-    desc: "Build and run the service once"
-    deps: [build]
+  cqrs:run:
+    desc: "Run the CQRS sync service"
+    dir: cqrs
     cmds:
-      - ./db_sync
+      - task run
 
-  test:
-    desc: "Run unit tests (no infrastructure required)"
+  cqrs:test:
+    desc: "Run CQRS unit tests"
+    dir: cqrs
     cmds:
-      - go test ./internal/...
+      - task test
 
-  test:integration:
-    desc: "Run integration tests against live docker-compose stack"
+  cqrs:test:integration:
+    desc: "Run CQRS integration tests against shared infrastructure"
+    dir: cqrs
     cmds:
-      - go test -tags integration -v -timeout 60s ./internal/integration/...
+      - task test:integration
 
-  watch:
-    desc: "Rebuild and restart the service on any .go file change (watchexec)"
+  cqrs:watch:
+    desc: "Watch and restart the CQRS sync service"
+    dir: cqrs
     cmds:
-      - watchexec
-          --restart
-          --watch .
-          --exts go
-          --ignore db_sync
-          -- task run
+      - task watch

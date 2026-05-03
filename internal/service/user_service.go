@@ -33,6 +33,7 @@ func (us *UserService) HandleUserCreated(
 	user := view.UserView{
 		ID:                event.ID,
 		Email:             event.Email,
+		NumMessages:       0,
 		CreatedAt:         event.CreatedAt,
 		ImportantContacts: []view.ImportantContactView{},
 		Messages:          []view.MessageView{},

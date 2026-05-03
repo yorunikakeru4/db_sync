@@ -49,6 +49,7 @@ func TestIntegration_MessageAdded(t *testing.T) {
 	assert.Equal(t, 10, m.ID)
 	assert.Equal(t, "Hello", m.Subject)
 	assert.Equal(t, "World", m.Text)
+	assert.Equal(t, 1, result.NumMessages)
 	assert.WithinDuration(t, sentAt, m.CreatedAt, time.Millisecond)
 }
 
@@ -74,6 +75,7 @@ func TestIntegration_MessageDeleted(t *testing.T) {
 	var result view.UserView
 	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 1}).Decode(&result))
 	assert.Empty(t, result.Messages)
+	assert.Zero(t, result.NumMessages)
 }
 
 func TestIntegration_MessageAdded_UserNotFound(t *testing.T) {
@@ -94,4 +96,22 @@ func TestIntegration_MessageAdded_UserNotFound(t *testing.T) {
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, mongo.ErrNoDocuments))
+}
+
+func TestIntegration_MessageDeleted_MessageNotFound(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	db.Reset(t)
+	ctx := context.Background()
+	seedUser(t, db, 1, "alice@example.com")
+
+	err := (&kafkapkg.KafkaConsumer{}).DispatchEvent(ctx, &events.Event{
+		EventType: "message_deleted",
+		Payload:   map[string]any{"message_id": 404, "user_id": 1},
+	}, buildSyncSvc(db))
+	require.NoError(t, err)
+
+	var result view.UserView
+	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 1}).Decode(&result))
+	assert.Empty(t, result.Messages)
+	assert.Zero(t, result.NumMessages)
 }

@@ -84,7 +84,10 @@ func (r *MongoMessageViewRepository) AddMessageToUser(
 	result, err := r.DB.Collection("users").UpdateOne(
 		ctx,
 		bson.M{"id": userID},
-		bson.M{"$push": bson.M{"messages": message}},
+		bson.M{
+			"$push": bson.M{"messages": message},
+			"$inc":  bson.M{"num_messages": 1},
+		},
 	)
 	if err != nil {
 		return err
@@ -103,14 +106,26 @@ func (r *MongoMessageViewRepository) RemoveMessageFromUser(
 ) error {
 	result, err := r.DB.Collection("users").UpdateOne(
 		ctx,
-		bson.M{"id": userID},
-		bson.M{"$pull": bson.M{"messages": bson.M{"id": messageID}}},
+		bson.M{"id": userID, "messages.id": messageID},
+		bson.M{
+			"$pull": bson.M{"messages": bson.M{"id": messageID}},
+			"$inc":  bson.M{"num_messages": -1},
+		},
 	)
 	if err != nil {
 		return err
 	}
 	if result.MatchedCount == 0 {
-		return errors.Join(ErrMessageViewUserNotFound, mongo.ErrNoDocuments)
+		// Deleting a missing message is idempotent for an existing user view.
+		var existing bson.M
+		err = r.DB.Collection("users").FindOne(ctx, bson.M{"id": userID}).Decode(&existing)
+		if err == nil {
+			return nil
+		}
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.Join(ErrMessageViewUserNotFound, mongo.ErrNoDocuments)
+		}
+		return err
 	}
 	return nil
 }

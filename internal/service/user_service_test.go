@@ -45,6 +45,7 @@ func TestHandleUserCreated(t *testing.T) {
 			expectedView := view.UserView{
 				ID:                tc.payload.ID,
 				Email:             tc.payload.Email,
+				NumMessages:       0,
 				CreatedAt:         tc.payload.CreatedAt,
 				ImportantContacts: []view.ImportantContactView{},
 				Messages:          []view.MessageView{},

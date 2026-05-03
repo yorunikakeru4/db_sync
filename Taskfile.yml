@@ -1,0 +1,85 @@
+version: "3"
+
+tasks:
+  # ── Bootstrap ─────────────────────────────────────────────────────────────────
+  init:
+    desc: "Create .env from .env.example (skips if .env already exists)"
+    cmds:
+      - cp .env.example .env
+      - echo ".env created — fill in your secrets before running 'task up'"
+    status:
+      - test -f .env
+
+  # ── Infrastructure ────────────────────────────────────────────────────────────
+  up:
+    desc: "Start all infrastructure services (default: podman)"
+    cmds:
+      - task: up:podman
+
+  up:podman:
+    desc: "Start PostgreSQL, MongoDB and Kafka with podman compose"
+    cmds:
+      - podman-compose up -d
+
+  up:docker:
+    desc: "Start PostgreSQL, MongoDB and Kafka with docker compose"
+    cmds:
+      - docker compose up -d
+    
+  down:
+    desc: "Stop all infrastructure services (default: podman)" 
+    cmds:
+      - task: down:podman
+
+  down:podman:
+    cmds:
+      - podman-compose down
+
+  down:docker:
+    cmds:
+      - sudo docker compose down
+
+  # ── Dependencies ──────────────────────────────────────────────────────────────
+  deps:
+    desc: "Download and tidy Go module dependencies"
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  # ── Build & Run ───────────────────────────────────────────────────────────────
+  build:
+    desc: "Build the db_sync binary"
+    cmds:
+      - go build -o db_sync ./cmd/db_sync/...
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - db_sync
+
+  run:
+    desc: "Build and run the service once"
+    deps: [build]
+    cmds:
+      - ./db_sync
+
+  test:
+    desc: "Run unit tests (no infrastructure required)"
+    cmds:
+      - go test ./internal/...
+
+  test:integration:
+    desc: "Run integration tests against live docker-compose stack"
+    cmds:
+      - go test -tags integration -v -timeout 60s ./internal/integration/...
+
+  watch:
+    desc: "Rebuild and restart the service on any .go file change (watchexec)"
+    cmds:
+      - watchexec
+          --restart
+          --watch .
+          --exts go
+          --ignore db_sync
+          -- task run

@@ -1,18 +1,24 @@
+// Package app wires together all components and runs the event loop.
 package app
 
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"db_sync/internal/middleware"
 	"db_sync/internal/service"
 	"db_sync/internal/storage"
 	"db_sync/internal/transport/kafka"
 )
 
+// Run initialises all infrastructure connections, assembles the service graph,
+// and starts the Kafka consumer loop. It blocks until a SIGTERM or SIGINT is
+// received, then shuts down gracefully.
 func Run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -33,16 +39,14 @@ func Run() {
 
 	// Repositories
 	userRepo := storage.NewPostgresUserRepository(pg)
-	emailRepo := storage.NewPostgresEmailRepository(pg)
-	messageRepo := storage.NewPostgresMessageRepository(pg)
 
 	userViewRepo := storage.NewMongoUserViewRepository(mongoDB)
 	emailViewRepo := storage.NewMongoEmailViewRepository(mongoDB)
 	messageViewRepo := storage.NewMongoMessageViewRepository(mongoDB)
 	// Services
 	userService := service.NewUserService(userRepo, userViewRepo)
-	emailService := service.NewEmailService(emailRepo, emailViewRepo)
-	messageService := service.NewMessageService(messageRepo, messageViewRepo)
+	emailService := service.NewEmailService(emailViewRepo)
+	messageService := service.NewMessageService(messageViewRepo)
 
 	syncService := service.NewSyncService(
 		userService,
@@ -50,8 +54,12 @@ func Run() {
 		messageService,
 	)
 
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+
 	reader := kafka.InitConsumer()
-	consumer := kafka.NewKafkaConsumer(reader)
+	consumer := middleware.NewLoggingConsumer(kafka.NewKafkaConsumer(reader), logger)
 	defer consumer.Close()
 
 	log.Println("Sync service started. Waiting for events...")
@@ -61,6 +69,9 @@ func Run() {
 	for {
 		event, err := consumer.GetEvent(ctx)
 		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
 			log.Println("Error reading event:", err)
 			time.Sleep(time.Second)
 			continue
@@ -72,6 +83,7 @@ func Run() {
 	}
 }
 
+// waitForExit blocks until SIGTERM or SIGINT is received, then cancels ctx.
 func waitForExit(cancel context.CancelFunc) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)

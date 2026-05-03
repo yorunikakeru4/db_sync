@@ -1,11 +1,19 @@
+// Package models defines the data structures used in the application layer.
 package models
 
 import "time"
 
+// User is the enriched application-layer user model that combines the write-model
+// user with their denormalised important contacts and messages.
 type User struct {
-	ID              int
-	Email           string
+	// ID is the user's primary key.
+	ID int
+	// Email is the user's email address.
+	Email string
+	// ImportantEmails is the list of email contacts marked as important by the user.
 	ImportantEmails []Email
-	Messages        []Message
-	CreatedAt       time.Time
+	// Messages is the list of messages associated with the user.
+	Messages []Message
+	// CreatedAt is the UTC timestamp when the user was created.
+	CreatedAt time.Time
 }

@@ -12,6 +12,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
+// InitMongoDB connects to MongoDB using the global MongoConnect config, pings the
+// primary to verify connectivity, and returns the client and the "email_service" database.
 func InitMongoDB() (*mongo.Client, *mongo.Database, error) {
 	cfg := config.MongoConnect
 

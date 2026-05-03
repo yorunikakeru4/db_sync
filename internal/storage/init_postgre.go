@@ -1,3 +1,4 @@
+// Package storage provides repository implementations for PostgreSQL and MongoDB.
 package storage
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// InitDB opens and validates a PostgreSQL connection using the global SQLConnect config.
 func InitDB() (*sqlx.DB, error) {
 	cfg := config.SQLConnect
 

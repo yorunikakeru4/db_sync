@@ -8,21 +8,21 @@ import (
 	"db_sync/internal/view"
 )
 
+// EmailService handles email-related events and updates the MongoDB read model.
 type EmailService struct {
-	postgresEmailRepo  storage.EmailRepository
 	mongoEmailViewRepo storage.EmailViewRepository
 }
 
+// NewEmailService creates a new EmailService.
 func NewEmailService(
-	postgresEmailRepo storage.EmailRepository,
 	mongoEmailViewRepo storage.EmailViewRepository,
 ) *EmailService {
 	return &EmailService{
-		postgresEmailRepo:  postgresEmailRepo,
 		mongoEmailViewRepo: mongoEmailViewRepo,
 	}
 }
 
+// HandleEmailAddedToUser projects an email_added event into the user's important contacts list.
 func (es *EmailService) HandleEmailAddedToUser(
 	ctx context.Context,
 	event events.EmailAddedPayload,
@@ -32,10 +32,11 @@ func (es *EmailService) HandleEmailAddedToUser(
 		Category:   event.Category,
 		Importance: event.Importance,
 	}
-	userID := event.UserID
-	return es.mongoEmailViewRepo.AddEmailToUser(ctx, userID, email)
+	return es.mongoEmailViewRepo.AddEmailToUser(ctx, event.UserID, email)
 }
 
+// HandleEmailUpdatedForUser projects an email_updated event by updating the contact's
+// category and importance in the user's contacts list.
 func (es *EmailService) HandleEmailUpdatedForUser(
 	ctx context.Context, event events.EmailUpdatedPayload,
 ) error {
@@ -47,6 +48,8 @@ func (es *EmailService) HandleEmailUpdatedForUser(
 	return es.mongoEmailViewRepo.UpdateEmailForUser(ctx, event.UserID, email)
 }
 
+// HandleEmailRemovedFromUser projects an email_removed event by removing the contact
+// from the user's contacts list.
 func (es *EmailService) HandleEmailRemovedFromUser(
 	ctx context.Context, event events.EmailRemovedPayload,
 ) error {

@@ -8,11 +8,13 @@ import (
 	"db_sync/internal/view"
 )
 
+// UserService handles user lifecycle events and updates the MongoDB read model.
 type UserService struct {
 	userRepo     storage.UserRepository
 	userViewRepo storage.UserViewRepository
 }
 
+// NewUserService creates a new UserService.
 func NewUserService(
 	userRepo storage.UserRepository,
 	userViewRepo storage.UserViewRepository,
@@ -23,6 +25,7 @@ func NewUserService(
 	}
 }
 
+// HandleUserCreated projects a user_created event by creating the user view document.
 func (us *UserService) HandleUserCreated(
 	ctx context.Context,
 	event events.UserCreatedPayload,
@@ -35,6 +38,7 @@ func (us *UserService) HandleUserCreated(
 	return us.userViewRepo.CreateUserView(ctx, user)
 }
 
+// HandleUserDeleted projects a user_deleted event by removing the user view document.
 func (us *UserService) HandleUserDeleted(
 	ctx context.Context,
 	event events.UserDeletedPayload,

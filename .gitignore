@@ -1,4 +1,10 @@
 .env
+.codex
+backend/api
 db_sync
 cqrs/db_sync
 go.work.sum
+vue/node_modules
+vue/dist
+vue/*.tsbuildinfo
+vue/.env.local

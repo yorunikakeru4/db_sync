@@ -1,0 +1,45 @@
+orgs:
+  - key: default
+    name: default
+    status: active
+
+users:
+  - key: default
+    name: default
+    password: default
+
+user_tokens:
+  - key: default
+    user_key: default
+
+org_users:
+  - key: default
+    org_key: default
+    user_key: default
+    role: owner
+
+teams:
+  - key: default
+    org_key: default
+    name: default
+    perm_level: admin
+
+team_users:
+  - key: default
+    team_key: default
+    org_user_key: default
+
+projects:
+  - key: default
+    org_key: default
+    name: default
+
+project_tokens:
+  - key: default
+    project_key: default
+
+project_users:
+  - key: default
+    project_key: default
+    org_user_key: default
+    perm_level: admin

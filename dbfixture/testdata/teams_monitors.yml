@@ -1,0 +1,34 @@
+teams:
+  - key: team1
+    org_key: default
+    name: Team1
+    perm_level: view
+team_users:
+  - key: user1
+    team_key: team1
+    org_user_key: default
+
+metric_monitors:
+  - key: monitor1
+    project_key: default
+    name: monitor
+    status: active
+    metrics:
+      - kafka_partition_replicas_in_sync as $in_sync
+    query:
+      - min($in_sync) as in_sync
+      - group by topic
+      - group by partition
+    min_allowed_value: 2
+    num_eval_points: 1
+    absent_points: ignore
+    team_keys: ['team1']
+
+error_monitors:
+  - key: monitor2
+    project_key: default
+    name: monitor
+    status: active
+    query:
+      - sum($logs)
+    team_keys: ['team1']

@@ -1,0 +1,61 @@
+update: true
+
+orgs: 
+  - key: org1
+    name: Org1
+    budget: 30
+  - key: org2
+    name: Org2
+    budget: 30.5
+
+users:
+  - key: user1
+    name: Bob
+    email: bob@b.io
+  - key: user2
+    name: Bob 2
+    email: bob2@b.io
+
+user_tokens:
+  - key: token1
+    user_key: user1
+    token: secret1
+  - key: token2
+    user_key: user2
+    token: secret2
+
+org_users: 
+  - key: orguser1
+    org_key: org1
+    user_key: user1
+    role: owner
+  - key: orguser2
+    org_key: org2
+    user_key: user2
+    role: member
+
+projects:
+  - key: project1
+    name: Project1
+    org_key: org1
+  - key: project2
+    name: Project2
+    org_key: org2
+
+project_tokens:
+  - key: token1
+    project_key: project1
+    token: secret1
+  - key: token2
+    project_key: project2
+    token: secret2
+
+project_users:
+  - key: project_user1
+    project_key: project1
+    org_user_key: orguser1
+    perm_level: edit
+  - key: project_user2
+    project_key: project2
+    org_user_key: orguser2
+    perm_level: admin

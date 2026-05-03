@@ -1,0 +1,10 @@
+users:
+  - key: first
+  - key: second
+user_tokens:
+  - key: first
+    user_key: first
+    token: first
+  - key: second
+    user_key: second
+    token: second

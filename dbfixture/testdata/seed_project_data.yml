@@ -1,0 +1,29 @@
+projects:
+  - key: first
+    org_key: default
+    name: first
+  - key: second
+    org_key: default
+    name: second
+
+project_users:
+  - key: first
+    project_key: first
+    org_user_key: default
+    perm_level: admin
+  - key: second
+    project_key: second
+    org_user_key: default
+    perm_level: admin
+
+metric_monitors:
+  - key: metric
+    project_key: default
+    name: "HTTP latency p95"
+    status: "active"
+    trend_agg_func: last
+    notify_everyone_by_email: false
+    metrics:
+      - metric as $metric
+    query:
+      - min($metric) as $min_metric

@@ -151,6 +151,14 @@ select {
   border-collapse: collapse;
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table-scroll .data-table {
+  min-width: 860px;
+}
+
 .data-table th,
 .data-table td {
   border-bottom: 1px solid #e4e7eb;
@@ -165,4 +173,22 @@ select {
   background: #fff5f5;
   color: #9b1c1c;
   padding: 12px 14px;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 20px 14px 36px;
+  }
+
+  .detail-list {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .table-scroll .data-table {
+    min-width: 720px;
+  }
 }

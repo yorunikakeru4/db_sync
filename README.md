@@ -53,3 +53,24 @@ task dev
 ## Дальше
 
 Сервисы уже разделены на `cqrs/` и `backend/`, оба живут на общей инфраструктуре из корня.
+
+## Frontend
+
+`vue/` contains a small Vue + Vite console for planned CQRS HTTP endpoints.
+
+Run locally:
+
+```bash
+cd vue
+pnpm install
+cp .env.example .env.local
+# set VITE_API_BASE_URL in .env.local to your backend URL
+pnpm dev
+```
+
+Build:
+
+```bash
+cd vue
+pnpm build
+```

@@ -82,7 +82,7 @@ func (db *TestDB) Reset(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
 
-	if _, err := db.PG.ExecContext(ctx, "TRUNCATE users CASCADE"); err != nil {
+	if _, err := db.PG.ExecContext(ctx, "TRUNCATE users, emails CASCADE"); err != nil {
 		t.Fatalf("testutil: truncate users: %v", err)
 	}
 	if err := db.Mongo.Collection("users").Drop(ctx); err != nil {

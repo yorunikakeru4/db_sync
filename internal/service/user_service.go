@@ -31,9 +31,11 @@ func (us *UserService) HandleUserCreated(
 	event events.UserCreatedPayload,
 ) error {
 	user := view.UserView{
-		ID:        event.ID,
-		Email:     event.Email,
-		CreatedAt: event.CreatedAt,
+		ID:                event.ID,
+		Email:             event.Email,
+		CreatedAt:         event.CreatedAt,
+		ImportantContacts: []view.ImportantContactView{},
+		Messages:          []view.MessageView{},
 	}
 	return us.userViewRepo.CreateUserView(ctx, user)
 }

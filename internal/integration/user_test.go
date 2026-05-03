@@ -53,6 +53,7 @@ func TestIntegration_UserCreated(t *testing.T) {
 
 	assert.Equal(t, 1, result.ID)
 	assert.Equal(t, "alice@example.com", result.Email)
+	assert.WithinDuration(t, createdAt, result.CreatedAt, time.Millisecond)
 }
 
 func TestIntegration_UserDeleted(t *testing.T) {

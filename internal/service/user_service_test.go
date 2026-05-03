@@ -43,9 +43,11 @@ func TestHandleUserCreated(t *testing.T) {
 			viewRepo := new(mocks.MockUserViewRepository)
 
 			expectedView := view.UserView{
-				ID:        tc.payload.ID,
-				Email:     tc.payload.Email,
-				CreatedAt: tc.payload.CreatedAt,
+				ID:                tc.payload.ID,
+				Email:             tc.payload.Email,
+				CreatedAt:         tc.payload.CreatedAt,
+				ImportantContacts: []view.ImportantContactView{},
+				Messages:          []view.MessageView{},
 			}
 			viewRepo.On("CreateUserView", context.Background(), expectedView).Return(tc.repoErr)
 

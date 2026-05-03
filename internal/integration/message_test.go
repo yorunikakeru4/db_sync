@@ -47,6 +47,7 @@ func TestIntegration_MessageAdded(t *testing.T) {
 	assert.Equal(t, 10, m.ID)
 	assert.Equal(t, "Hello", m.Subject)
 	assert.Equal(t, "World", m.Text)
+	assert.WithinDuration(t, sentAt, m.CreatedAt, time.Millisecond)
 }
 
 func TestIntegration_MessageDeleted(t *testing.T) {

@@ -103,6 +103,14 @@ tasks:
     cmds:
       - task test:integration
 
+  test:
+    desc: "Run all project tests sequentially"
+    cmds:
+      - task: cqrs:test
+      - task: backend:test
+      - task: cqrs:test:integration
+      - task: backend:test:integration
+
   backend:watch:
     desc: "Watch and restart the backend API service"
     dir: backend

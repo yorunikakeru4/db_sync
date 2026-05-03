@@ -63,7 +63,8 @@ func TestIntegration_EmailUpdated(t *testing.T) {
 		EventType: "email_updated",
 		Payload: map[string]any{
 			"user_id":        1,
-			"address":        "contact@work.com",
+			"address":        "updated@work.com",
+			"old_address":    "contact@work.com",
 			"old_category":   "personal",
 			"new_category":   "vip",
 			"old_importance": 1,
@@ -78,6 +79,7 @@ func TestIntegration_EmailUpdated(t *testing.T) {
 
 	require.Len(t, result.ImportantContacts, 1)
 	c := result.ImportantContacts[0]
+	assert.Equal(t, "updated@work.com", c.Email)
 	assert.Equal(t, "vip", c.Category)
 	assert.Equal(t, 10, c.Importance)
 }

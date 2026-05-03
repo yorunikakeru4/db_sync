@@ -27,8 +27,8 @@ type EmailRepository interface {
 type EmailViewRepository interface {
 	// AddEmailToUser appends an important contact to the user's contacts array.
 	AddEmailToUser(ctx context.Context, userID int, email view.ImportantContactView) error
-	// UpdateEmailForUser updates category and importance of an existing contact.
-	UpdateEmailForUser(ctx context.Context, userID int, email view.ImportantContactView) error
+	// UpdateEmailForUser updates an existing contact matched by oldEmailAddress.
+	UpdateEmailForUser(ctx context.Context, userID int, oldEmailAddress string, email view.ImportantContactView) error
 	// RemoveEmailFromUser removes the contact matching emailAddress from the user's contacts array.
 	RemoveEmailFromUser(ctx context.Context, userID int, emailAddress string) error
 }
@@ -99,14 +99,16 @@ func (r *MongoEmailViewRepository) AddEmailToUser(
 func (r *MongoEmailViewRepository) UpdateEmailForUser(
 	ctx context.Context,
 	userID int,
+	oldEmailAddress string,
 	email view.ImportantContactView,
 ) error {
 	collection := r.DB.Collection("users")
 	result, err := collection.UpdateOne(
 		ctx,
-		bson.M{"id": userID, "important_contacts.email": email.Email},
+		bson.M{"id": userID, "important_contacts.email": oldEmailAddress},
 		bson.M{
 			"$set": bson.M{
+				"important_contacts.$.email":      email.Email,
 				"important_contacts.$.category":   email.Category,
 				"important_contacts.$.importance": email.Importance,
 			},

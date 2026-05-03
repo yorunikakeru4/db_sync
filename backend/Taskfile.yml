@@ -1,0 +1,45 @@
+version: "3"
+
+tasks:
+  deps:
+    desc: "Download and tidy Go module dependencies"
+    cmds:
+      - env GOCACHE=/tmp/go-build go mod download
+      - env GOCACHE=/tmp/go-build go mod tidy
+
+  build:
+    desc: "Build the backend API binary"
+    cmds:
+      - env GOCACHE=/tmp/go-build go build -o backend_api ./cmd/api/...
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - backend_api
+
+  run:
+    desc: "Build and run the backend API once"
+    deps: [build]
+    cmds:
+      - ./backend_api
+
+  test:
+    desc: "Run backend unit tests"
+    cmds:
+      - env GOCACHE=/tmp/go-build go test ./internal/...
+
+  test:integration:
+    desc: "Run backend integration tests against live docker-compose stack"
+    cmds:
+      - env GOCACHE=/tmp/go-build go test -tags integration -v -timeout 60s ./internal/transport/http
+
+  watch:
+    desc: "Rebuild and restart the backend API on .go changes (watchexec)"
+    cmds:
+      - watchexec
+          --restart
+          --watch .
+          --exts go
+          --ignore backend_api
+          -- task run

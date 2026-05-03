@@ -1,0 +1,9 @@
+> some-command
+----
+test name: TestWalk/ext
+
+# SUBTEST: foo
+
+> some-command
+----
+test name: TestWalk/ext/foo

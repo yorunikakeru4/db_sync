@@ -24,6 +24,8 @@ type EmailUpdatedPayload struct {
 	EmailID int `json:"email_id"`
 	// Address is the email address string.
 	Address string `json:"address"`
+	// OldAddress is the email address string before the update.
+	OldAddress string `json:"old_address"`
 	// UserID is the primary key of the owning user.
 	UserID int `json:"user_id"`
 	// OldCategory is the category value before the update.

@@ -1,0 +1,51 @@
+> string vals=foo
+----
+"foo"
+
+> bool vals=true
+----
+true
+
+> float64 vals=1.1
+----
+1.1
+
+> time.Duration vals=10m
+----
+10m0s
+
+# =============================================================================
+
+> []string vals=[foo, bar, bax]
+----
+[]string{"foo", "bar", "bax"}
+
+> []int vals=[1, 2, 3, 4]
+----
+[]int{1, 2, 3, 4}
+
+> []int64 vals=[10, 16]
+----
+[]int64{10, 16}
+
+> []uint64 vals=[1, 2, 3, 4]
+----
+[]uint64{0x1, 0x2, 0x3, 0x4}
+
+> []float64 vals=[1.1, 2.2, 3.3, 4.4]
+----
+[]float64{1.1, 2.2, 3.3, 4.4}
+
+# =============================================================================
+
+> map[string]string vals={"foo":"sum"}
+----
+map[string]string{"foo":"sum"}
+
+> map[string]string vals={"host::str":"ASC"}
+----
+map[string]string{"host::str":"ASC"}
+
+> map[string]string vals={"bar":"avg","foo":"sum"}
+----
+map[string]string{"bar":"avg", "foo":"sum"}

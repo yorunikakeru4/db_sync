@@ -72,3 +72,50 @@ tasks:
     dir: cqrs
     cmds:
       - task watch
+
+  backend:deps:
+    desc: "Download and tidy backend module dependencies"
+    dir: backend
+    cmds:
+      - task deps
+
+  backend:build:
+    desc: "Build the backend API service"
+    dir: backend
+    cmds:
+      - task build
+
+  backend:run:
+    desc: "Run the backend API service"
+    dir: backend
+    cmds:
+      - task run
+
+  backend:test:
+    desc: "Run backend unit tests"
+    dir: backend
+    cmds:
+      - task test
+
+  backend:test:integration:
+    desc: "Run backend integration tests against shared infrastructure"
+    dir: backend
+    cmds:
+      - task test:integration
+
+  backend:watch:
+    desc: "Watch and restart the backend API service"
+    dir: backend
+    cmds:
+      - task watch
+
+  dev:
+    desc: "Run CQRS and backend together"
+    cmds:
+      - |
+        bash -lc '
+          trap "kill 0" EXIT INT TERM
+          (cd cqrs && task run) &
+          (cd backend && task run) &
+          wait
+        '

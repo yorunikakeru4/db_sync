@@ -5,6 +5,7 @@
 ## Layout
 
 - `cqrs/` — отдельный Go-модуль с текущим CQRS sync-сервисом
+- `backend/` — отдельный Go-модуль с write-side HTTP API
 - `docker-compose.yml` — общая локальная инфраструктура
 - `.env` / `.env.example` — общие переменные для локального запуска
 
@@ -34,6 +35,21 @@ task build
 task run
 ```
 
+Backend API:
+
+```bash
+task backend:build
+task backend:run
+task backend:test
+task backend:test:integration
+```
+
+Оба сервиса вместе:
+
+```bash
+task dev
+```
+
 ## Дальше
 
-Следующий сервис можно добавлять рядом с `cqrs/` как отдельный модуль, например `backend/`.
+Сервисы уже разделены на `cqrs/` и `backend/`, оба живут на общей инфраструктуре из корня.

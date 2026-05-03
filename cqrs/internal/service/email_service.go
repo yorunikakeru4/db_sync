@@ -45,7 +45,7 @@ func (es *EmailService) HandleEmailUpdatedForUser(
 		Category:   event.NewCategory,
 		Importance: event.NewImportance,
 	}
-	return es.mongoEmailViewRepo.UpdateEmailForUser(ctx, event.UserID, email)
+	return es.mongoEmailViewRepo.UpdateEmailForUser(ctx, event.UserID, event.OldAddress, email)
 }
 
 // HandleEmailRemovedFromUser projects an email_removed event by removing the contact

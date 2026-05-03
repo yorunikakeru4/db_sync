@@ -27,9 +27,10 @@ func (m *MockEmailViewRepository) AddEmailToUser(
 func (m *MockEmailViewRepository) UpdateEmailForUser(
 	ctx context.Context,
 	userID int,
+	oldEmailAddress string,
 	email view.ImportantContactView,
 ) error {
-	args := m.Called(ctx, userID, email)
+	args := m.Called(ctx, userID, oldEmailAddress, email)
 	return args.Error(0)
 }
 

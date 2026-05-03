@@ -1,0 +1,11 @@
+> load-fixture fixture=initial
+----
+ok
+
+> get-user id=1
+----
+id: 1
+email: alice@example.com
+important_emails: []
+messages: []
+created_at: "2026-05-03T10:00:00Z"

@@ -50,6 +50,30 @@ func TestDispatchEvent_UserCreated(t *testing.T) {
 	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
 }
 
+func TestDispatchEvent_UserCreated_StringTimestamp(t *testing.T) {
+	userViewRepo := new(mocks.MockUserViewRepository)
+	emailViewRepo := new(mocks.MockEmailViewRepository)
+	msgViewRepo := new(mocks.MockMessageViewRepository)
+
+	userViewRepo.On("CreateUserView", mock.Anything, mock.Anything).Return(nil)
+
+	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
+	consumer := &KafkaConsumer{}
+
+	event := &events.Event{
+		EventType: "user_created",
+		Payload: map[string]any{
+			"id":         1,
+			"email":      "alice@example.com",
+			"created_at": "2026-05-03T18:00:00Z",
+		},
+	}
+	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
+
+	require.NoError(t, err)
+	userViewRepo.AssertCalled(t, "CreateUserView", mock.Anything, mock.Anything)
+}
+
 func TestDispatchEvent_UserDeleted(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
 	emailViewRepo := new(mocks.MockEmailViewRepository)
@@ -146,7 +170,7 @@ func TestDispatchEvent_EmailUpdated(t *testing.T) {
 	emailViewRepo := new(mocks.MockEmailViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
-	emailViewRepo.On("UpdateEmailForUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	emailViewRepo.On("UpdateEmailForUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	syncSvc := syncServiceWith(userViewRepo, emailViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
@@ -156,6 +180,7 @@ func TestDispatchEvent_EmailUpdated(t *testing.T) {
 		Payload: map[string]any{
 			"user_id":        1,
 			"address":        "x@example.com",
+			"old_address":    "old@example.com",
 			"new_category":   "vip",
 			"new_importance": 10,
 		},
@@ -163,7 +188,7 @@ func TestDispatchEvent_EmailUpdated(t *testing.T) {
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
 	require.NoError(t, err)
-	emailViewRepo.AssertCalled(t, "UpdateEmailForUser", mock.Anything, mock.Anything, mock.Anything)
+	emailViewRepo.AssertCalled(t, "UpdateEmailForUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestDispatchEvent_EmailRemoved(t *testing.T) {

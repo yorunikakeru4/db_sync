@@ -4,6 +4,8 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"reflect"
+	"time"
 
 	"db_sync/internal/application/events"
 	"db_sync/internal/config"
@@ -120,6 +122,12 @@ func decodePayload(payload any, dst any) error {
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		TagName: "json",
 		Result:  dst,
+		DecodeHook: func(from reflect.Type, to reflect.Type, data any) (any, error) {
+			if from.Kind() == reflect.String && to == reflect.TypeOf(time.Time{}) {
+				return time.Parse(time.RFC3339, data.(string))
+			}
+			return data, nil
+		},
 	})
 	if err != nil {
 		return err

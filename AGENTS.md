@@ -5,9 +5,9 @@ Rules here apply to the Go backend. `vue/`, `mcp/`, and `mcp/openapi/` have thei
 ## Core Rules
 
 - Go 1.26+.
-- Use `github.com/uptrace/uptrace/pkg/json`, not `encoding/json`.
+- Use `encoding/json` for JSON marshaling unless a package already requires something else.
 - Use `github.com/goccy/go-yaml`, not `yaml.v2/v3/v4`.
-- Use `github.com/uptrace/uptrace/pkg/validerr` for user input validation.
+- Minimize dependencies on `github.com/uptrace/*`. `bun` and `bunrouter` are allowed; prefer non-`uptrace` packages for everything else.
 - Use `errors.AsType`, not `errors.As`.
 - Enum string values and OpenTelemetry span names use `snake_case`.
 - When renaming a YAML option, keep the old field as a deprecated pointer field, migrate it in init with `slog.Warn`, and only apply it when the new field is unset.
@@ -25,7 +25,7 @@ Rules here apply to the Go backend. `vue/`, `mcp/`, and `mcp/openapi/` have thei
 
 ## Testing And Telemetry
 
-- Prefer datadriven tests via `pkg/ddtest`; use table-driven tests only when datadriven is a poor fit.
+- Prefer local `datadriven/`; use table-driven tests only when datadriven is a poor fit.
 - Standalone tests need a comment describing the scenario they cover.
 - Mock interfaces with `testify/mock`.
 - Rewrite datadriven expectations with `go test -rewrite ./...`.

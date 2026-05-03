@@ -1,0 +1,50 @@
+> noop
+----
+
+> noop
+----
+
+> noop
+----
+
+> noop
+some input
+----
+some input
+
+> noop
+some input
+----
+some input
+
+> duplicate
+some input
+----
+some input
+some input
+
+> duplicate
+some input
+----
+some input
+some input
+
+> duplicate-with-blank
+some input
+---- BEGIN
+some input
+
+some input
+---- END
+
+> duplicate-with-blank
+some input
+---- BEGIN
+some input
+
+some input
+---- END
+
+> no-output
+some input
+----

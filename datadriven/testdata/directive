@@ -1,0 +1,62 @@
+> some-command
+----
+cmd: some-command
+0 arguments
+
+> some-command arg1 arg2=val1
+----
+cmd: some-command
+2 arguments
+arg1
+arg2=val1
+
+> some-command arg1 arg2=val1 arg3=[val1, val2]
+----
+cmd: some-command
+3 arguments
+arg1
+arg2=val1
+arg3=[val1, val2]
+
+# Tolerate extra spaces.
+> some-command  arg1   arg2=val1    arg3=[val1,    val2]
+----
+cmd: some-command
+3 arguments
+arg1
+arg2=val1
+arg3=[val1,    val2]
+
+# Tolerate unnecessary brackets.
+> some-command arg1=[] arg2=[val]
+----
+cmd: some-command
+2 arguments
+arg1=[]
+arg2=[val]
+
+# Allow bracket nesting inside values.
+> some-command arg1=[1, [2,3], [4 * [1 + 2]]] arg2=[some [nested [parens, etc]], more [nested [parens]]]
+----
+cmd: some-command
+2 arguments
+arg1=[1, [2,3], [4 * [1 + 2]]]
+arg2=[some [nested [parens, etc]], more [nested [parens]]]
+
+> make argTuple=[1, 🍌] argInt=12 argString=greedily,impatient moreIgnore= a,b,c
+----
+cmd: make
+5 arguments
+argTuple=[1, 🍌]
+argInt=12
+argString=greedily,impatient
+moreIgnore=
+a,b,c
+
+> index-constraints vars=[a int not null, b int, c int as [a+b] stored] index=[a,]
+a+b = 1
+----
+cmd: index-constraints
+2 arguments
+vars=[a int not null, b int, c int as [a+b] stored]
+index=[a,]

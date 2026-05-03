@@ -80,6 +80,7 @@ func TestHandleEmailUpdatedForUser(t *testing.T) {
 			payload: events.EmailUpdatedPayload{
 				UserID:        1,
 				Address:       "contact@example.com",
+				OldAddress:    "before@example.com",
 				OldCategory:   "personal",
 				NewCategory:   "work",
 				OldImportance: 1,
@@ -93,6 +94,7 @@ func TestHandleEmailUpdatedForUser(t *testing.T) {
 			payload: events.EmailUpdatedPayload{
 				UserID:        3,
 				Address:       "x@example.com",
+				OldAddress:    "old-x@example.com",
 				NewCategory:   "vip",
 				NewImportance: 10,
 			},
@@ -109,7 +111,7 @@ func TestHandleEmailUpdatedForUser(t *testing.T) {
 				Category:   tc.payload.NewCategory,
 				Importance: tc.payload.NewImportance,
 			}
-			repo.On("UpdateEmailForUser", context.Background(), tc.payload.UserID, expected).Return(tc.repoErr)
+			repo.On("UpdateEmailForUser", context.Background(), tc.payload.UserID, tc.payload.OldAddress, expected).Return(tc.repoErr)
 
 			svc := NewEmailService(repo)
 			err := svc.HandleEmailUpdatedForUser(context.Background(), tc.payload)

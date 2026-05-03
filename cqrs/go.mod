@@ -3,13 +3,20 @@ module db_sync
 go 1.26
 
 require (
+	github.com/cockroachdb/datadriven v1.0.2
+	github.com/goccy/go-yaml v1.18.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/segmentio/kafka-go v0.4.49
 	github.com/stretchr/testify v1.11.1
+	github.com/uptrace/bun v1.2.15
+	github.com/uptrace/bun/dialect/pgdialect v1.2.15
+	github.com/uptrace/bun/driver/pgdriver v1.2.15
 	go.mongodb.org/mongo-driver/v2 v2.4.0
 )
+
+replace github.com/cockroachdb/datadriven => ../datadriven
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -30,5 +37,4 @@ require (
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

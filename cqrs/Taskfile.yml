@@ -43,14 +43,14 @@ tasks:
   deps:
     desc: "Download and tidy Go module dependencies"
     cmds:
-      - env GOCACHE=/tmp/go-build go mod download
-      - env GOCACHE=/tmp/go-build go mod tidy
+      - go mod download
+      - go mod tidy
 
   # ── Build & Run ───────────────────────────────────────────────────────────────
   build:
     desc: "Build the db_sync binary"
     cmds:
-      - env GOCACHE=/tmp/go-build go build -o db_sync ./cmd/db_sync/...
+      - go build -o db_sync ./cmd/db_sync/...
     sources:
       - "**/*.go"
       - go.mod
@@ -67,12 +67,12 @@ tasks:
   test:
     desc: "Run unit tests (no infrastructure required)"
     cmds:
-      - env GOCACHE=/tmp/go-build go test ./internal/...
+      - go test ./internal/...
 
   test:integration:
     desc: "Run integration tests against live docker-compose stack"
     cmds:
-      - env GOCACHE=/tmp/go-build go test -tags integration -v -timeout 60s ./internal/integration/...
+      - go test -tags integration -v -timeout 60s ./internal/integration/...
 
   watch:
     desc: "Rebuild and restart the service on any .go file change (watchexec)"

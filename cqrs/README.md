@@ -7,7 +7,7 @@
 - один бинарь: [`cmd/db_sync/main.go`](/home/yorunikakeru/Documents/Education/2/DMS/db_sync/cqrs/cmd/db_sync/main.go:1)
 - consumer Kafka на `segmentio/kafka-go`
 - read-model в MongoDB, коллекция `users`
-- PostgreSQL schema в [`init.sql`](/home/yorunikakeru/Documents/Education/2/DMS/db_sync/cqrs/init.sql:1)
+- PostgreSQL schema в [`init.sql`](/home/yorunikakeru/Documents/Education/2/DMS/db_sync/init.sql:1)
 - обработка событий:
   - `user_created`
   - `user_deleted`
@@ -49,7 +49,6 @@
 ├── internal/testutil
 ├── internal/transport/kafka
 ├── internal/view
-├── init.sql
 └── Taskfile.yml
 ```
 

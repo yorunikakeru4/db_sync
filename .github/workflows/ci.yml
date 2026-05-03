@@ -104,7 +104,7 @@ jobs:
         run: |
           PGPASSWORD=db_password psql \
             -h 127.0.0.1 -U db_user -d db_name \
-            -f cqrs/init.sql
+            -f init.sql
 
       - name: Integration tests
         working-directory: cqrs
@@ -167,7 +167,7 @@ jobs:
         run: |
           PGPASSWORD=db_password psql \
             -h 127.0.0.1 -U db_user -d db_name \
-            -f cqrs/init.sql
+            -f init.sql
 
       - name: Integration tests
         working-directory: backend

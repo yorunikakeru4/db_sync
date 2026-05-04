@@ -35,11 +35,10 @@ tasks:
       - go test -tags integration -v -timeout 60s ./internal/transport/http
 
   watch:
-    desc: "Rebuild and restart the backend API on .go changes (watchexec)"
+    desc: "Restart the backend API on .go changes (watchexec + go run)"
     cmds:
       - watchexec
           --restart
           --watch .
           --exts go
-          --ignore backend_api
-          -- task run
+          -- go run ./cmd/api/...

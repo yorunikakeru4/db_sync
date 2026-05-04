@@ -78,6 +78,42 @@ func TestIntegration_MessageDeleted(t *testing.T) {
 	assert.Zero(t, result.NumMessages)
 }
 
+func TestMongoMessageViewRepository_UpsertMessageToUser_ReplacesExistingMessage(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	db.Reset(t)
+	ctx := context.Background()
+
+	userRepo := storage.NewMongoUserViewRepository(db.Mongo)
+	msgRepo := storage.NewMongoMessageViewRepository(db.Mongo)
+
+	require.NoError(t, userRepo.CreateUserView(ctx, view.UserView{
+		ID:          1,
+		Email:       "user@example.com",
+		NumMessages: 1,
+		Messages: []view.MessageView{{
+			ID:        10,
+			Subject:   "Old subject",
+			Text:      "Old text",
+			CreatedAt: time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC),
+		}},
+	}))
+
+	require.NoError(t, msgRepo.UpsertMessageToUser(ctx, 1, view.MessageView{
+		ID:        10,
+		Subject:   "New subject",
+		Text:      "New text",
+		CreatedAt: time.Date(2024, 6, 2, 12, 0, 0, 0, time.UTC),
+	}))
+
+	var got view.UserView
+	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 1}).Decode(&got))
+	require.Len(t, got.Messages, 1)
+	assert.Equal(t, 1, got.NumMessages)
+	assert.Equal(t, "New subject", got.Messages[0].Subject)
+	assert.Equal(t, "New text", got.Messages[0].Text)
+	assert.WithinDuration(t, time.Date(2024, 6, 2, 12, 0, 0, 0, time.UTC), got.Messages[0].CreatedAt, time.Millisecond)
+}
+
 func TestIntegration_MessageAdded_UserNotFound(t *testing.T) {
 	db := testutil.NewTestDB(t)
 	db.Reset(t)
@@ -114,4 +150,44 @@ func TestIntegration_MessageDeleted_MessageNotFound(t *testing.T) {
 	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 1}).Decode(&result))
 	assert.Empty(t, result.Messages)
 	assert.Zero(t, result.NumMessages)
+}
+
+func TestIntegration_MessageCreated_RepeatsUpdateEmbeddedMessage(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	db.Reset(t)
+	ctx := context.Background()
+	seedUser(t, db, 1, "alice@example.com")
+
+	consumer := &kafkapkg.KafkaConsumer{}
+	syncSvc := buildSyncSvc(db)
+
+	require.NoError(t, consumer.DispatchEvent(ctx, &events.Event{
+		EventType: "message_created",
+		Payload: map[string]any{
+			"message_id": 10,
+			"user_id":    1,
+			"subject":    "Old",
+			"content":    "First",
+			"date_sent":  "2026-05-04T10:00:00Z",
+		},
+	}, syncSvc))
+
+	require.NoError(t, consumer.DispatchEvent(ctx, &events.Event{
+		EventType: "message_created",
+		Payload: map[string]any{
+			"message_id": 10,
+			"user_id":    1,
+			"subject":    "New",
+			"content":    "Second",
+			"date_sent":  "2026-05-04T11:00:00Z",
+		},
+	}, syncSvc))
+
+	var got view.UserView
+	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 1}).Decode(&got))
+	require.Len(t, got.Messages, 1)
+	require.Equal(t, 1, got.NumMessages)
+	require.Equal(t, "New", got.Messages[0].Subject)
+	require.Equal(t, "Second", got.Messages[0].Text)
+	require.WithinDuration(t, time.Date(2026, 5, 4, 11, 0, 0, 0, time.UTC), got.Messages[0].CreatedAt, time.Millisecond)
 }

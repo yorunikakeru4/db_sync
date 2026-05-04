@@ -18,3 +18,11 @@ type UserDeletedPayload struct {
 	// ID is the primary key of the deleted user.
 	ID int `json:"id"`
 }
+
+// UserUpdatedPayload is the payload for a user_updated event.
+type UserUpdatedPayload struct {
+	// ID is the primary key of the updated user.
+	ID int `json:"id"`
+	// Email is the user's updated email address.
+	Email string `json:"email"`
+}

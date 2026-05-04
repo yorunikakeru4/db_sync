@@ -1,6 +1,7 @@
 .env
 .codex
 backend/api
+docs/
 db_sync
 cqrs/db_sync
 go.work.sum

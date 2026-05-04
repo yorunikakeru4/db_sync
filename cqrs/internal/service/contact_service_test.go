@@ -23,6 +23,7 @@ func TestHandleContactAddedToUser(t *testing.T) {
 		{
 			name: "success",
 			payload: events.ContactAddedPayload{
+				ContactID:  10,
 				UserID:     1,
 				Value:      "contact@example.com",
 				Category:   "work",
@@ -34,6 +35,7 @@ func TestHandleContactAddedToUser(t *testing.T) {
 		{
 			name: "repo error propagated",
 			payload: events.ContactAddedPayload{
+				ContactID:  20,
 				UserID:     2,
 				Value:      "other@example.com",
 				Category:   "personal",
@@ -48,6 +50,7 @@ func TestHandleContactAddedToUser(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := new(mocks.MockContactViewRepository)
 			expected := view.ImportantContactView{
+				ContactID:  tc.payload.ContactID,
 				Value:      tc.payload.Value,
 				Category:   tc.payload.Category,
 				Importance: tc.payload.Importance,
@@ -78,6 +81,7 @@ func TestHandleContactUpdatedForUser(t *testing.T) {
 		{
 			name: "success — uses NewCategory and NewImportance",
 			payload: events.ContactUpdatedPayload{
+				ContactID:     10,
 				UserID:        1,
 				Value:         "contact@example.com",
 				OldValue:      "before@example.com",
@@ -92,6 +96,7 @@ func TestHandleContactUpdatedForUser(t *testing.T) {
 		{
 			name: "repo error propagated",
 			payload: events.ContactUpdatedPayload{
+				ContactID:     20,
 				UserID:        3,
 				Value:         "x@example.com",
 				OldValue:      "old-x@example.com",
@@ -107,11 +112,12 @@ func TestHandleContactUpdatedForUser(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := new(mocks.MockContactViewRepository)
 			expected := view.ImportantContactView{
+				ContactID:  tc.payload.ContactID,
 				Value:      tc.payload.Value,
 				Category:   tc.payload.NewCategory,
 				Importance: tc.payload.NewImportance,
 			}
-			repo.On("UpdateContactForUser", context.Background(), tc.payload.UserID, tc.payload.OldValue, expected).Return(tc.repoErr)
+			repo.On("UpdateContactForUser", context.Background(), tc.payload.UserID, tc.payload.ContactID, expected).Return(tc.repoErr)
 
 			svc := NewContactService(repo)
 			err := svc.HandleContactUpdatedForUser(context.Background(), tc.payload)
@@ -136,13 +142,13 @@ func TestHandleContactRemovedFromUser(t *testing.T) {
 	}{
 		{
 			name:    "success",
-			payload: events.ContactRemovedPayload{UserID: 1, Value: "old@example.com"},
+			payload: events.ContactRemovedPayload{ContactID: 10, UserID: 1, Value: "old@example.com"},
 			repoErr: nil,
 			wantErr: false,
 		},
 		{
 			name:    "repo error propagated",
-			payload: events.ContactRemovedPayload{UserID: 2, Value: "gone@example.com"},
+			payload: events.ContactRemovedPayload{ContactID: 20, UserID: 2, Value: "gone@example.com"},
 			repoErr: errors.New("pull failed"),
 			wantErr: true,
 		},
@@ -151,7 +157,7 @@ func TestHandleContactRemovedFromUser(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := new(mocks.MockContactViewRepository)
-			repo.On("RemoveContactFromUser", context.Background(), tc.payload.UserID, tc.payload.Value).Return(tc.repoErr)
+			repo.On("RemoveContactFromUser", context.Background(), tc.payload.UserID, tc.payload.ContactID).Return(tc.repoErr)
 
 			svc := NewContactService(repo)
 			err := svc.HandleContactRemovedFromUser(context.Background(), tc.payload)

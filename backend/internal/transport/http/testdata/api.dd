@@ -203,7 +203,8 @@ body:
   email: new@example.com
   num_messages: 1
   important_contacts:
-  - value: important@example.com
+  - contact_id: 3
+    value: important@example.com
     category: "9"
     importance: 5
   messages:
@@ -241,7 +242,7 @@ timestamp: ignore
 payload:
   contact_id: 3
   value: updated-important@example.com
-  old_value: important@example.com
+  old_value: updated-important@example.com
   user_id: 2
   old_category: "9"
   new_category: "11"
@@ -261,7 +262,8 @@ body:
   email: new@example.com
   num_messages: 1
   important_contacts:
-  - value: updated-important@example.com
+  - contact_id: 3
+    value: updated-important@example.com
     category: "11"
     importance: 7
   messages:
@@ -356,5 +358,98 @@ ok
 
 > http method=GET path=/users/2
 ----
-status: 500
-body: "get user view: mongo: no documents in result\n"
+status: 404
+body: user not found
+
+> http method=POST path=/users
+email: twice-read@example.com
+----
+status: 201
+body:
+  id: 3
+  email: twice-read@example.com
+  created_at: ignore
+
+> check-kafka index=9
+----
+event_id: ""
+event_type: user_created
+version: 1
+timestamp: ignore
+payload:
+  id: 3
+  email: twice-read@example.com
+  created_at: ignore
+
+> project-kafka index=9
+----
+ok
+
+> http method=GET path=/users/3
+----
+status: 200
+body:
+  id: 3
+  email: twice-read@example.com
+  num_messages: 0
+  important_contacts: []
+  messages: []
+  created_at: ignore
+
+> http method=POST path=/users
+email: sender-delete@example.com
+----
+status: 201
+body:
+  id: 4
+  email: sender-delete@example.com
+  created_at: ignore
+
+> http method=POST path=/users
+email: receiver-delete@example.com
+----
+status: 201
+body:
+  id: 5
+  email: receiver-delete@example.com
+  created_at: ignore
+
+> http method=POST path=/messages
+external_id: delete-user-ext
+sender_id: 4
+receiver_id: 5
+subject: delete-user-subject
+text: delete-user-body
+date_sent: 2026-05-03T14:00:00Z
+----
+status: 201
+body:
+  id: 3
+  external_id: delete-user-ext
+  sender_id: 4
+  receiver_id: 5
+  subject: delete-user-subject
+  text: delete-user-body
+  date_sent: "2026-05-03T14:00:00Z"
+  created_at: ignore
+
+> http method=DELETE path=/users/4
+----
+status: 204
+body: null
+
+> http method=DELETE path=/users/4
+----
+status: 404
+body: user not found
+
+> http method=GET path=/users/3
+----
+status: 200
+body:
+  id: 3
+  email: twice-read@example.com
+  num_messages: 0
+  important_contacts: []
+  messages: []
+  created_at: ignore

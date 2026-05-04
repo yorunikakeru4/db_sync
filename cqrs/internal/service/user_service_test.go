@@ -107,3 +107,19 @@ func TestHandleUserDeleted(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleUserUpdated(t *testing.T) {
+	userRepo := new(mocks.MockUserRepository)
+	viewRepo := new(mocks.MockUserViewRepository)
+
+	viewRepo.On("UpdateUserViewEmail", context.Background(), 7, "updated@example.com").Return(nil)
+
+	svc := NewUserService(userRepo, viewRepo)
+	err := svc.HandleUserUpdated(context.Background(), events.UserUpdatedPayload{
+		ID:    7,
+		Email: "updated@example.com",
+	})
+
+	require.NoError(t, err)
+	viewRepo.AssertExpectations(t)
+}

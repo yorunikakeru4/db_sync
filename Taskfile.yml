@@ -5,10 +5,20 @@ tasks:
     desc: "Create .env from .env.example (skips if .env already exists)"
     cmds:
       - cp .env.example .env
+      - cp ./vue/.env.example ./vue/.env
       - echo ".env created — fill in your secrets before running 'task up'"
     status:
       - test -f .env
-
+  vue:
+    dir: '{{.ROOT_DIR}}/vue'
+    desc: "Start vue client"
+    cmds:
+      - pnpm dev
+  vue:install:
+    dir: '{{.ROOT_DIR}}/vue'
+    desc: "Install deps for vue"
+    cmds: 
+      - pnpm install
   up:
     desc: "Start shared infrastructure (default: podman)"
     cmds:
@@ -116,6 +126,17 @@ tasks:
     dir: backend
     cmds:
       - task watch
+
+  watch:
+    desc: "Watch and restart CQRS and backend together (watchexec + go run)"
+    cmds:
+      - |
+        bash -lc '
+          trap "kill 0" EXIT INT TERM
+          (cd cqrs && watchexec --restart --watch . --exts go -- go run ./cmd/db_sync/...) &
+          (cd backend && watchexec --restart --watch . --exts go -- go run ./cmd/api/...) &
+          wait
+        '
 
   dev:
     desc: "Run CQRS and backend together"

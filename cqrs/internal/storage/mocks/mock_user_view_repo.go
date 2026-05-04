@@ -35,3 +35,9 @@ func (m *MockUserViewRepository) DeleteUserView(ctx context.Context, id int) err
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
+
+// UpdateUserViewEmail implements storage.UserViewRepository.
+func (m *MockUserViewRepository) UpdateUserViewEmail(ctx context.Context, id int, email string) error {
+	args := m.Called(ctx, id, email)
+	return args.Error(0)
+}

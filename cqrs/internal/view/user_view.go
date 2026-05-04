@@ -22,6 +22,8 @@ type UserView struct {
 
 // ImportantContactView is an embedded sub-document representing a single important contact.
 type ImportantContactView struct {
+	// ContactID is the primary key of the contact record.
+	ContactID int `bson:"contact_id"`
 	// Value is the contact value.
 	Value string `bson:"value"`
 	// Category is the user-assigned category label for this contact.

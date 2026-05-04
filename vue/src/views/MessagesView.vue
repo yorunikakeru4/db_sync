@@ -1,37 +1,44 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { createMessage, getMessages } from '../api/messages'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { createMessage, deleteMessageById, listMessages, updateMessageById } from '../api/messages'
 import DataTable from '../components/DataTable.vue'
 import DetailCard from '../components/DetailCard.vue'
 import ErrorAlert from '../components/ErrorAlert.vue'
 import FormSection from '../components/FormSection.vue'
 
 const createForm = reactive({
-  user_id: '',
+  external_id: '',
+  sender_id: 0,
+  receiver_id: 0,
   subject: '',
-  content: '',
-  date_sent: '',
+  text: '',
 })
 
-const getForm = reactive({
-  value: '',
+const updateForm = reactive({
+  id: '',
+  external_id: '',
+  sender_id: 0,
+  receiver_id: 0,
+  subject: '',
+  text: '',
+})
+
+const deleteForm = reactive({
+  id: '',
 })
 
 const created = ref<Record<string, unknown> | null>(null)
 const rows = ref<Record<string, unknown>[]>([])
 const errorMessage = ref<string | null>(null)
 const loading = ref(false)
+let pollTimer: number | undefined
 
-const normalizeRows = (value: unknown): Record<string, unknown>[] => {
-  if (Array.isArray(value)) {
-    return value.filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
+async function refreshMessages() {
+  try {
+    rows.value = (await listMessages()) ?? []
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'List messages failed'
   }
-
-  if (value !== null && typeof value === 'object') {
-    return [value as Record<string, unknown>]
-  }
-
-  return []
 }
 
 async function handleCreate() {
@@ -39,7 +46,12 @@ async function handleCreate() {
   errorMessage.value = null
 
   try {
-    created.value = await createMessage({ ...createForm })
+    created.value = await createMessage({
+      ...createForm,
+      sender_id: Number(createForm.sender_id),
+      receiver_id: Number(createForm.receiver_id),
+    })
+    await refreshMessages()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Create message failed'
   } finally {
@@ -47,18 +59,54 @@ async function handleCreate() {
   }
 }
 
-async function handleGet() {
+async function handleDelete() {
   loading.value = true
   errorMessage.value = null
 
   try {
-    rows.value = normalizeRows(await getMessages(getForm.value))
+    await deleteMessageById(deleteForm.id)
+    created.value = null
+    await refreshMessages()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Get messages failed'
+    errorMessage.value = error instanceof Error ? error.message : 'Delete message failed'
   } finally {
     loading.value = false
   }
 }
+
+async function handleUpdate() {
+  loading.value = true
+  errorMessage.value = null
+
+  try {
+    created.value = await updateMessageById({
+      id: updateForm.id,
+      external_id: updateForm.external_id,
+      sender_id: Number(updateForm.sender_id),
+      receiver_id: Number(updateForm.receiver_id),
+      subject: updateForm.subject,
+      text: updateForm.text,
+    })
+    await refreshMessages()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Update message failed'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  await refreshMessages()
+  pollTimer = window.setInterval(() => {
+    void refreshMessages()
+  }, 5000)
+})
+
+onUnmounted(() => {
+  if (pollTimer !== undefined) {
+    window.clearInterval(pollTimer)
+  }
+})
 </script>
 
 <template>
@@ -66,8 +114,16 @@ async function handleGet() {
     <FormSection title="Create message" description="Создание сообщения через write endpoint.">
       <form class="form-grid" @submit.prevent="handleCreate">
         <label class="field">
-          <span>User ID</span>
-          <input v-model="createForm.user_id" type="text" required />
+          <span>External ID</span>
+          <input v-model="createForm.external_id" type="text" required />
+        </label>
+        <label class="field">
+          <span>Sender ID</span>
+          <input v-model="createForm.sender_id" type="number" min="1" required />
+        </label>
+        <label class="field">
+          <span>Receiver ID</span>
+          <input v-model="createForm.receiver_id" type="number" min="1" required />
         </label>
         <label class="field">
           <span>Subject</span>
@@ -75,23 +131,49 @@ async function handleGet() {
         </label>
         <label class="field">
           <span>Content</span>
-          <textarea v-model="createForm.content" rows="4" required />
-        </label>
-        <label class="field">
-          <span>Date sent</span>
-          <input v-model="createForm.date_sent" type="datetime-local" required />
+          <textarea v-model="createForm.text" rows="4" required />
         </label>
         <button class="button" :disabled="loading">Create</button>
       </form>
     </FormSection>
 
-    <FormSection title="Get messages" description="Чтение сообщений через current read endpoint helper.">
-      <form class="form-grid" @submit.prevent="handleGet">
+    <FormSection title="Update message" description="Обновление сообщения по ID.">
+      <form class="form-grid" @submit.prevent="handleUpdate">
         <label class="field">
-          <span>Lookup value</span>
-          <input v-model="getForm.value" type="text" required />
+          <span>Message ID</span>
+          <input v-model="updateForm.id" type="text" required />
         </label>
-        <button class="button" :disabled="loading">Get</button>
+        <label class="field">
+          <span>External ID</span>
+          <input v-model="updateForm.external_id" type="text" required />
+        </label>
+        <label class="field">
+          <span>Sender ID</span>
+          <input v-model="updateForm.sender_id" type="number" min="1" required />
+        </label>
+        <label class="field">
+          <span>Receiver ID</span>
+          <input v-model="updateForm.receiver_id" type="number" min="1" required />
+        </label>
+        <label class="field">
+          <span>Subject</span>
+          <input v-model="updateForm.subject" type="text" required />
+        </label>
+        <label class="field">
+          <span>Content</span>
+          <textarea v-model="updateForm.text" rows="4" required />
+        </label>
+        <button class="button" :disabled="loading">Update</button>
+      </form>
+    </FormSection>
+
+    <FormSection title="Delete message" description="Удаление сообщения по ID.">
+      <form class="form-grid" @submit.prevent="handleDelete">
+        <label class="field">
+          <span>Message ID</span>
+          <input v-model="deleteForm.id" type="text" required />
+        </label>
+        <button class="button" :disabled="loading">Delete</button>
       </form>
     </FormSection>
 

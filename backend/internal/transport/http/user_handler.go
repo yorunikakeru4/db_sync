@@ -1,15 +1,17 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	nethttp "net/http"
 	"time"
 
 	"backend/internal/bunmodel"
-	"backend/internal/events"
+	backendstorage "backend/internal/storage"
 
 	"github.com/goccy/go-yaml"
 	"github.com/uptrace/bunrouter"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type createUserRequest struct {
@@ -18,10 +20,20 @@ type createUserRequest struct {
 }
 
 func (h *Handler) registerUserRoutes() {
+	h.router.GET("/users", h.listUsers)
 	h.router.GET("/users/:id", h.getUser)
 	h.router.POST("/users", h.createUser)
 	h.router.PUT("/users/:id", h.updateUser)
 	h.router.DELETE("/users/:id", h.deleteUser)
+}
+
+func (h *Handler) listUsers(w nethttp.ResponseWriter, req bunrouter.Request) error {
+	users, err := h.userViews.ListUserViews(req.Context())
+	if err != nil {
+		nethttp.Error(w, fmt.Sprintf("list users: %v", err), nethttp.StatusInternalServerError)
+		return nil
+	}
+	return bunrouter.JSON(w, users)
 }
 
 func (h *Handler) getUser(w nethttp.ResponseWriter, req bunrouter.Request) error {
@@ -33,6 +45,10 @@ func (h *Handler) getUser(w nethttp.ResponseWriter, req bunrouter.Request) error
 
 	user, err := h.userViews.GetUserViewByID(req.Context(), id)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			nethttp.Error(w, "user not found", nethttp.StatusNotFound)
+			return nil
+		}
 		nethttp.Error(w, fmt.Sprintf("get user view: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
@@ -56,14 +72,7 @@ func (h *Handler) createUser(w nethttp.ResponseWriter, req bunrouter.Request) er
 		nethttp.Error(w, fmt.Sprintf("create user: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
-	if err := h.producer.Publish(req.Context(), events.UserCreated, events.UserCreatedPayload{
-		ID:        user.ID,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-	}); err != nil {
-		nethttp.Error(w, fmt.Sprintf("publish user_created: %v", err), nethttp.StatusInternalServerError)
-		return nil
-	}
+	// Event captured by PostgreSQL trigger → domain_events → worker → Kafka
 
 	w.WriteHeader(nethttp.StatusCreated)
 	return bunrouter.JSON(w, user)
@@ -87,12 +96,7 @@ func (h *Handler) updateUser(w nethttp.ResponseWriter, req bunrouter.Request) er
 		nethttp.Error(w, fmt.Sprintf("update user: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
-	if err := h.producer.Publish(req.Context(), events.UserUpdated, events.UserUpdatedPayload{
-		ID: user.ID, Email: user.Email,
-	}); err != nil {
-		nethttp.Error(w, fmt.Sprintf("publish user_updated: %v", err), nethttp.StatusInternalServerError)
-		return nil
-	}
+	// Event captured by PostgreSQL trigger → domain_events → worker → Kafka
 
 	return bunrouter.JSON(w, user)
 }
@@ -105,13 +109,14 @@ func (h *Handler) deleteUser(w nethttp.ResponseWriter, req bunrouter.Request) er
 	}
 
 	if err := h.users.DeleteUser(req.Context(), id); err != nil {
+		if errors.Is(err, backendstorage.ErrUserNotFound) {
+			nethttp.Error(w, "user not found", nethttp.StatusNotFound)
+			return nil
+		}
 		nethttp.Error(w, fmt.Sprintf("delete user: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
-	if err := h.producer.Publish(req.Context(), events.UserDeleted, events.UserDeletedPayload{ID: id}); err != nil {
-		nethttp.Error(w, fmt.Sprintf("publish user_deleted: %v", err), nethttp.StatusInternalServerError)
-		return nil
-	}
+	// Event captured by PostgreSQL trigger → domain_events → worker → Kafka
 
 	w.WriteHeader(nethttp.StatusNoContent)
 	return nil

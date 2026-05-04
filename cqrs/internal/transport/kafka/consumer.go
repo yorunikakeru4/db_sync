@@ -33,9 +33,9 @@ func InitConsumer() *kafka.Reader {
 // consumerConfig builds the kafka.ReaderConfig from the global KafkaConf.
 func consumerConfig() kafka.ReaderConfig {
 	return kafka.ReaderConfig{
-		Brokers: []string{config.KafkaConf.Host + ":" + config.KafkaConf.Port},
-		Topic:   config.KafkaConf.Topic,
-		GroupID: config.KafkaConf.GroupID,
+		Brokers:  []string{config.KafkaConf.Host + ":" + config.KafkaConf.Port},
+		Topic:    config.KafkaConf.Topic,
+		GroupID:  config.KafkaConf.GroupID,
 		MaxBytes: 10e6,
 	}
 }
@@ -77,13 +77,20 @@ func (kc *KafkaConsumer) DispatchEvent(
 			return err
 		}
 		return syncService.UserService.HandleUserDeleted(ctx, payload)
+	case "user_updated":
+		var payload events.UserUpdatedPayload
+		err := decodePayload(event.Payload, &payload)
+		if err != nil {
+			return err
+		}
+		return syncService.UserService.HandleUserUpdated(ctx, payload)
 	case "message_created":
 		var payload events.MessageCreatedPayload
 		err := decodePayload(event.Payload, &payload)
 		if err != nil {
 			return err
 		}
-		return syncService.MessageService.HandleMessageAddedToUser(ctx, payload)
+		return syncService.MessageService.HandleMessageUpsertToUser(ctx, payload)
 	case "message_deleted":
 		var payload events.MessageDeletedPayload
 		err := decodePayload(event.Payload, &payload)

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"backend/internal/bunmodel"
 
@@ -20,6 +21,17 @@ type ContactUpdateSnapshot struct {
 type DeletedUserContact struct {
 	Contact     bunmodel.Contact
 	UserContact bunmodel.UserContact
+}
+
+// UserContactWithValue is a denormalized contact row for API reads.
+type UserContactWithValue struct {
+	UserID           int64     `json:"user_id" bun:"user_id"`
+	ContactID        int64     `json:"contact_id" bun:"contact_id"`
+	Value            string    `json:"value" bun:"value"`
+	Importance       int       `json:"importance" bun:"importance"`
+	Category         int       `json:"category" bun:"category"`
+	CreatedAt        time.Time `json:"created_at" bun:"created_at"`
+	ContactCreatedAt time.Time `json:"contact_created_at" bun:"contact_created_at"`
 }
 
 // ContactRepo persists contacts and user-contact links via bun.
@@ -45,27 +57,17 @@ func (r *ContactRepo) AddUserContact(ctx context.Context, userContact *bunmodel.
 			}
 		}
 		userContact.ContactID = contact.ID
-		_, err := tx.NewInsert().Model(userContact).
+		if _, err := tx.NewInsert().Model(userContact).
 			Column("user_id", "contact_id", "importance", "category").
 			On("CONFLICT (user_id, contact_id) DO UPDATE").
 			Set("importance = EXCLUDED.importance").
 			Set("category = EXCLUDED.category").
-			Exec(ctx)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(
-			ctx,
-			"UPDATE users_contacts SET importance = ?, category = ? WHERE user_id = ? AND contact_id = ?",
-			userContact.Importance, userContact.Category, userContact.UserID, userContact.ContactID,
-		); err != nil {
+			Returning("*").
+			Exec(ctx); err != nil {
 			return err
 		}
 
-		if err := tx.NewSelect().Model(contact).Where("id = ?", contact.ID).Scan(ctx); err != nil {
-			return err
-		}
-		return tx.NewSelect().Model(userContact).Where("user_id = ? AND contact_id = ?", userContact.UserID, userContact.ContactID).Scan(ctx)
+		return tx.NewSelect().Model(contact).Where("id = ?", contact.ID).Scan(ctx)
 	})
 }
 
@@ -128,4 +130,47 @@ func (r *ContactRepo) DeleteUserContact(ctx context.Context, userID, contactID i
 		return nil
 	})
 	return deleted, err
+}
+
+// ListUserContacts returns all user-contact links joined with contact values.
+func (r *ContactRepo) ListUserContacts(ctx context.Context) ([]UserContactWithValue, error) {
+	rows := make([]UserContactWithValue, 0)
+	err := r.db.NewSelect().
+		TableExpr("users_contacts AS uc").
+		Join("JOIN contacts AS c ON c.id = uc.contact_id").
+		ColumnExpr("uc.user_id").
+		ColumnExpr("uc.contact_id").
+		ColumnExpr("c.contact_value AS value").
+		ColumnExpr("uc.importance").
+		ColumnExpr("uc.category").
+		ColumnExpr("uc.created_at").
+		ColumnExpr("c.created_at AS contact_created_at").
+		OrderExpr("uc.user_id ASC, uc.contact_id ASC").
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ListUserContactsByUserID returns all contact links for a single user.
+func (r *ContactRepo) ListUserContactsByUserID(ctx context.Context, userID int64) ([]UserContactWithValue, error) {
+	rows := make([]UserContactWithValue, 0)
+	err := r.db.NewSelect().
+		TableExpr("users_contacts AS uc").
+		Join("JOIN contacts AS c ON c.id = uc.contact_id").
+		Where("uc.user_id = ?", userID).
+		ColumnExpr("uc.user_id").
+		ColumnExpr("uc.contact_id").
+		ColumnExpr("c.contact_value AS value").
+		ColumnExpr("uc.importance").
+		ColumnExpr("uc.category").
+		ColumnExpr("uc.created_at").
+		ColumnExpr("c.created_at AS contact_created_at").
+		OrderExpr("uc.contact_id ASC").
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

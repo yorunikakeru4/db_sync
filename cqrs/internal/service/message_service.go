@@ -22,8 +22,8 @@ func NewMessageService(
 	}
 }
 
-// HandleMessageAddedToUser projects a message_created event into the user's message list.
-func (ms *MessageService) HandleMessageAddedToUser(
+// HandleMessageUpsertToUser projects a message_created event into the user's message list.
+func (ms *MessageService) HandleMessageUpsertToUser(
 	ctx context.Context,
 	event events.MessageCreatedPayload,
 ) error {
@@ -33,7 +33,7 @@ func (ms *MessageService) HandleMessageAddedToUser(
 		Text:      event.Content,
 		CreatedAt: event.DateSent,
 	}
-	return ms.messageViewRepo.AddMessageToUser(ctx, event.UserID, message)
+	return ms.messageViewRepo.UpsertMessageToUser(ctx, event.UserID, message)
 }
 
 // HandleMessageDeletedFromUser projects a message_deleted event by removing the message

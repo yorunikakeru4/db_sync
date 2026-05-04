@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"backend/internal/kafka"
+	"backend/internal/eventworker"
 	"backend/internal/readmodel"
 	"backend/internal/storage"
 	"backend/internal/testutil"
@@ -26,6 +26,7 @@ import (
 )
 
 // TestHTTPDatadriven verifies backend HTTP handlers with real Postgres and MongoDB dependencies.
+// Event publishing is now handled by PostgreSQL triggers → domain_events → worker.
 func TestHTTPDatadriven(t *testing.T) {
 	live := testutil.NewTestDB(t)
 	bunDB := bun.NewDB(live.PG.DB, pgdialect.New())
@@ -33,9 +34,7 @@ func TestHTTPDatadriven(t *testing.T) {
 		bunDB.Close()
 	})
 
-	producer := &kafka.MemProducer{}
 	handler, err := NewHandler(HandlerParams{
-		Producer:  producer,
 		Users:     storage.NewUserRepo(bunDB),
 		Messages:  storage.NewMessageRepo(bunDB),
 		Contacts:  storage.NewContactRepo(bunDB),
@@ -45,11 +44,13 @@ func TestHTTPDatadriven(t *testing.T) {
 		t.Fatalf("new handler: %v", err)
 	}
 
+	eventRepo := eventworker.NewPgRepository(bunDB)
+
 	runner := &httpRunner{
-		db:       live,
-		bunDB:    bunDB,
-		handler:  handler,
-		producer: producer,
+		db:        live,
+		bunDB:     bunDB,
+		handler:   handler,
+		eventRepo: eventRepo,
 	}
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
@@ -61,10 +62,10 @@ func TestHTTPDatadriven(t *testing.T) {
 }
 
 type httpRunner struct {
-	db       *testutil.TestDB
-	bunDB    *bun.DB
-	handler  *Handler
-	producer *kafka.MemProducer
+	db        *testutil.TestDB
+	bunDB     *bun.DB
+	handler   *Handler
+	eventRepo *eventworker.PgRepository
 }
 
 func (r *httpRunner) run(t *testing.T, tc *datadriven.TestCase) string {
@@ -77,7 +78,8 @@ func (r *httpRunner) run(t *testing.T, tc *datadriven.TestCase) string {
 			tc.Fatalf(t, "scan fixture: %v", err)
 		}
 		testutil.LoadFixtures(t, r.db, r.bunDB, filepath.Join("testdata", "fixtures", name+".yml"))
-		r.producer.Events = nil
+		// Clear domain_events table for clean state
+		_, _ = r.bunDB.NewDelete().Model((*eventworker.DomainEvent)(nil)).Where("1=1").Exec(context.Background())
 		return "ok"
 	case "http":
 		var method, path string
@@ -93,28 +95,52 @@ func (r *httpRunner) run(t *testing.T, tc *datadriven.TestCase) string {
 		r.handler.ServeHTTP(rec, req)
 		return renderHTTPResponse(t, method, path, rec.Code, rec.Body.Bytes())
 	case "check-kafka":
+		// Events are now in domain_events table, fetched by trigger
 		var index int
 		if err := tc.NamedArg("index").Scan(&index); err != nil {
 			tc.Fatalf(t, "scan index: %v", err)
 		}
-		if index < 0 || index >= len(r.producer.Events) {
-			tc.Fatalf(t, "kafka event index %d out of range; have %d", index, len(r.producer.Events))
-		}
-		return renderKafkaEvent(t, r.producer.Events[index])
-	case "project-kafka":
-		var index int
-		if err := tc.NamedArg("index").Scan(&index); err != nil {
-			tc.Fatalf(t, "scan index: %v", err)
-		}
-		if index < 0 || index >= len(r.producer.Events) {
-			tc.Fatalf(t, "kafka event index %d out of range; have %d", index, len(r.producer.Events))
-		}
-		body, err := json.Marshal(r.producer.Events[index])
+		events, err := r.eventRepo.FetchUnpublished(context.Background(), 100)
 		if err != nil {
-			tc.Fatalf(t, "marshal kafka event: %v", err)
+			tc.Fatalf(t, "fetch domain events: %v", err)
+		}
+		if index < 0 || index >= len(events) {
+			tc.Fatalf(t, "domain event index %d out of range; have %d", index, len(events))
+		}
+		return renderDomainEvent(t, events[index])
+	case "project-kafka":
+		// Project domain event to MongoDB
+		var index int
+		if err := tc.NamedArg("index").Scan(&index); err != nil {
+			tc.Fatalf(t, "scan index: %v", err)
+		}
+		events, err := r.eventRepo.FetchUnpublished(context.Background(), 100)
+		if err != nil {
+			tc.Fatalf(t, "fetch domain events: %v", err)
+		}
+		if index < 0 || index >= len(events) {
+			tc.Fatalf(t, "domain event index %d out of range; have %d", index, len(events))
+		}
+		evt := events[index]
+		// Parse payload to proper structure
+		var payload any
+		if err := json.Unmarshal(evt.Payload, &payload); err != nil {
+			tc.Fatalf(t, "unmarshal payload: %v", err)
+		}
+		// Build the event envelope that projector expects
+		envelope := map[string]any{
+			"event_id":   "test-id",
+			"event_type": evt.EventType,
+			"version":    1,
+			"timestamp":  evt.CreatedAt.Format(time.RFC3339),
+			"payload":    payload,
+		}
+		body, err := json.Marshal(envelope)
+		if err != nil {
+			tc.Fatalf(t, "marshal domain event: %v", err)
 		}
 		if err := projector.ProjectJSONEvent(context.Background(), r.db.Mongo, body); err != nil {
-			tc.Fatalf(t, "project kafka event: %v", err)
+			tc.Fatalf(t, "project domain event: %v", err)
 		}
 		return "ok"
 	default:
@@ -217,30 +243,28 @@ func decodeOrderedResponse(method, path string, body []byte) (any, bool) {
 	}
 }
 
-func renderKafkaEvent(t *testing.T, event any) string {
+func renderDomainEvent(t *testing.T, event eventworker.DomainEvent) string {
 	t.Helper()
 
-	body, err := yaml.Marshal(event)
-	if err != nil {
-		t.Fatalf("marshal kafka event: %v", err)
+	var payload map[string]any
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		t.Fatalf("unmarshal domain event payload: %v", err)
 	}
 
-	var parsed any
-	if err := yaml.Unmarshal(body, &parsed); err != nil {
-		t.Fatalf("decode kafka event yaml: %v", err)
+	root := map[string]any{
+		"event_id":   "",
+		"event_type": event.EventType,
+		"version":    1,
+		"timestamp":  "ignore",
+		"payload":    payload,
 	}
-	normalizeKafkaBody(parsed)
-
-	root, ok := parsed.(map[string]any)
-	if !ok {
-		return mustYAML(t, parsed)
-	}
+	normalizeKafkaBody(root)
 
 	return mustYAML(t, kafkaEventOutput{
-		EventID:   stringValue(root["event_id"]),
-		EventType: stringValue(root["event_type"]),
-		Version:   intValue(root["version"]),
-		Timestamp: stringValue(root["timestamp"]),
+		EventID:   "",
+		EventType: event.EventType,
+		Version:   1,
+		Timestamp: "ignore",
 		Payload:   orderedKafkaPayload(root),
 	})
 }
@@ -269,7 +293,8 @@ func normalizeHTTPBody(method, path string, value any) {
 		}
 		return
 	case *userViewResponseOutput:
-		if method == nethttp.MethodGet && path == "/users/2" {
+		// Normalize created_at for dynamically created users (not fixture user 1)
+		if method == nethttp.MethodGet && strings.HasPrefix(path, "/users/") && path != "/users/1" {
 			item.CreatedAt = "ignore"
 		}
 		return

@@ -18,9 +18,9 @@ type KafkaConfig struct {
 // KafkaConf is the global Kafka configuration used by the consumer.
 var KafkaConf = KafkaConfig{
 	Topic:   getEnv("KAFKA_TOPIC", "sync_topic"),
-	Host:    getEnv("KAFKA_HOST", "kafka"),
+	Host:    getEnv("KAFKA_HOST", "localhost"),
 	Port:    getEnv("KAFKA_PORT", "9092"),
-	GroupID: getEnv("KAFKA_GROUP_ID", "db_sync"),
+	GroupID: getEnv("KAFKA_GROUP_ID", "db_sync_group"),
 }
 
 func getEnv(key, fallback string) string {

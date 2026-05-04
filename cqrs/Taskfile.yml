@@ -75,11 +75,10 @@ tasks:
       - go test -tags integration -v -timeout 60s ./internal/integration/...
 
   watch:
-    desc: "Rebuild and restart the service on any .go file change (watchexec)"
+    desc: "Restart the service on any .go file change (watchexec + go run)"
     cmds:
       - watchexec
           --restart
           --watch .
           --exts go
-          --ignore db_sync
-          -- task run
+          -- go run ./cmd/db_sync/...

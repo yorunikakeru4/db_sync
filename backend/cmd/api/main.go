@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"backend/internal/eventworker"
 	"backend/internal/kafka"
 	"backend/internal/storage"
 	httptransport "backend/internal/transport/http"
@@ -51,7 +52,6 @@ func main() {
 	defer producer.Close()
 
 	handler, err := httptransport.NewHandler(httptransport.HandlerParams{
-		Producer:  producer,
 		Users:     storage.NewUserRepo(bunDB),
 		Messages:  storage.NewMessageRepo(bunDB),
 		Contacts:  storage.NewContactRepo(bunDB),
@@ -60,6 +60,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("build handler: %v", err)
 	}
+
+	// Start event worker to poll domain_events and publish to Kafka
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+
+	eventRepo := eventworker.NewPgRepository(bunDB)
+	worker := eventworker.NewWorker(eventRepo, producer,
+		eventworker.WithPollInterval(100*time.Millisecond),
+		eventworker.WithBatchSize(100),
+	)
+
+	go func() {
+		_ = worker.Run(workerCtx)
+	}()
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -74,7 +88,7 @@ func main() {
 		}
 	}()
 
-	waitForShutdown(server)
+	waitForShutdown(server, workerCancel)
 }
 
 func mustLoadConfig() Config {
@@ -102,17 +116,17 @@ func mustLoadConfig() Config {
 	}
 }
 
-func waitForShutdown(server *http.Server) {
+func waitForShutdown(server *http.Server, workerCancel context.CancelFunc) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 
+	workerCancel()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("shutdown http: %v", err)
-	}
+	_ = server.Shutdown(ctx)
 }
 
 func getenv(key, fallback string) string {

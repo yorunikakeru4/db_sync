@@ -28,6 +28,7 @@ func (es *ContactService) HandleContactAddedToUser(
 	event events.ContactAddedPayload,
 ) error {
 	contact := view.ImportantContactView{
+		ContactID:  event.ContactID,
 		Value:      event.Value,
 		Category:   event.Category,
 		Importance: event.Importance,
@@ -36,16 +37,17 @@ func (es *ContactService) HandleContactAddedToUser(
 }
 
 // HandleContactUpdatedForUser projects a contact_updated event by updating the contact's
-// category and importance in the user's contacts list.
+// value, category and importance in the user's contacts list.
 func (es *ContactService) HandleContactUpdatedForUser(
 	ctx context.Context, event events.ContactUpdatedPayload,
 ) error {
 	contact := view.ImportantContactView{
+		ContactID:  event.ContactID,
 		Value:      event.Value,
 		Category:   event.NewCategory,
 		Importance: event.NewImportance,
 	}
-	return es.mongoContactViewRepo.UpdateContactForUser(ctx, event.UserID, event.OldValue, contact)
+	return es.mongoContactViewRepo.UpdateContactForUser(ctx, event.UserID, event.ContactID, contact)
 }
 
 // HandleContactRemovedFromUser projects a contact_removed event by removing the contact
@@ -53,5 +55,5 @@ func (es *ContactService) HandleContactUpdatedForUser(
 func (es *ContactService) HandleContactRemovedFromUser(
 	ctx context.Context, event events.ContactRemovedPayload,
 ) error {
-	return es.mongoContactViewRepo.RemoveContactFromUser(ctx, event.UserID, event.Value)
+	return es.mongoContactViewRepo.RemoveContactFromUser(ctx, event.UserID, event.ContactID)
 }

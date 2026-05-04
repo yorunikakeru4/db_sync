@@ -6,9 +6,9 @@ import (
 	"fmt"
 	nethttp "net/http"
 	"strconv"
+	"strings"
 
 	"backend/internal/bunmodel"
-	"backend/internal/kafka"
 	"backend/internal/readmodel"
 	backendstorage "backend/internal/storage"
 
@@ -29,6 +29,14 @@ type UserStore interface {
 type UserViewStore interface {
 	// GetUserViewByID returns the denormalized MongoDB user document.
 	GetUserViewByID(ctx context.Context, id int64) (*readmodel.UserView, error)
+	// ListUserViews returns all denormalized MongoDB user documents.
+	ListUserViews(ctx context.Context) ([]readmodel.UserView, error)
+	// ListMessageViews returns flattened message rows from MongoDB projections.
+	ListMessageViews(ctx context.Context) ([]readmodel.MessageRow, error)
+	// ListContactViews returns flattened contact rows from MongoDB projections.
+	ListContactViews(ctx context.Context) ([]readmodel.ContactRow, error)
+	// ListContactViewsByUserID returns flattened contact rows for a user projection.
+	ListContactViewsByUserID(ctx context.Context, userID int64) ([]readmodel.ContactRow, error)
 }
 
 // MessageStore persists message mutations.
@@ -53,8 +61,6 @@ type ContactStore interface {
 
 // HandlerParams contains handler dependencies.
 type HandlerParams struct {
-	// Producer publishes mutation events.
-	Producer kafka.Producer
 	// Users persists user mutations.
 	Users UserStore
 	// Messages persists message mutations.
@@ -67,19 +73,15 @@ type HandlerParams struct {
 
 // Handler serves backend write-side HTTP requests.
 type Handler struct {
-	producer kafka.Producer
-	users    UserStore
-	messages MessageStore
-	contacts ContactStore
+	users     UserStore
+	messages  MessageStore
+	contacts  ContactStore
 	userViews UserViewStore
-	router   *bunrouter.Router
+	router    *bunrouter.Router
 }
 
 // NewHandler builds the backend HTTP router.
 func NewHandler(params HandlerParams) (*Handler, error) {
-	if params.Producer == nil {
-		return nil, errors.New("producer is required")
-	}
 	if params.Users == nil {
 		return nil, errors.New("user store is required")
 	}
@@ -94,12 +96,11 @@ func NewHandler(params HandlerParams) (*Handler, error) {
 	}
 
 	h := &Handler{
-		producer: params.Producer,
-		users:    params.Users,
-		messages: params.Messages,
-		contacts: params.Contacts,
+		users:     params.Users,
+		messages:  params.Messages,
+		contacts:  params.Contacts,
 		userViews: params.UserViews,
-		router:   bunrouter.New(),
+		router:    bunrouter.New(),
 	}
 	h.registerUserRoutes()
 	h.registerMessageRoutes()
@@ -109,7 +110,38 @@ func NewHandler(params HandlerParams) (*Handler, error) {
 
 // ServeHTTP routes a backend HTTP request.
 func (h *Handler) ServeHTTP(w nethttp.ResponseWriter, req *nethttp.Request) {
+	if h.applyCORS(w, req) {
+		return
+	}
 	h.router.ServeHTTP(w, req)
+}
+
+func (h *Handler) applyCORS(w nethttp.ResponseWriter, req *nethttp.Request) bool {
+	origin := req.Header.Get("Origin")
+	if !isAllowedOrigin(origin) {
+		return false
+	}
+
+	headers := w.Header()
+	headers.Set("Access-Control-Allow-Origin", origin)
+	headers.Set("Vary", "Origin")
+	headers.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+	headers.Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+
+	if req.Method == nethttp.MethodOptions {
+		w.WriteHeader(nethttp.StatusNoContent)
+		return true
+	}
+	return false
+}
+
+func isAllowedOrigin(origin string) bool {
+	switch strings.TrimSpace(origin) {
+	case "http://localhost:5173", "http://127.0.0.1:5173":
+		return true
+	default:
+		return false
+	}
 }
 
 func pathInt64(req bunrouter.Request, key string) (int64, error) {

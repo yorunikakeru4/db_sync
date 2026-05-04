@@ -27,10 +27,10 @@ func (m *MockContactViewRepository) AddContactToUser(
 func (m *MockContactViewRepository) UpdateContactForUser(
 	ctx context.Context,
 	userID int,
-	oldValue string,
+	contactID int,
 	contact view.ImportantContactView,
 ) error {
-	args := m.Called(ctx, userID, oldValue, contact)
+	args := m.Called(ctx, userID, contactID, contact)
 	return args.Error(0)
 }
 
@@ -38,8 +38,8 @@ func (m *MockContactViewRepository) UpdateContactForUser(
 func (m *MockContactViewRepository) RemoveContactFromUser(
 	ctx context.Context,
 	userID int,
-	value string,
+	contactID int,
 ) error {
-	args := m.Called(ctx, userID, value)
+	args := m.Called(ctx, userID, contactID)
 	return args.Error(0)
 }

@@ -38,6 +38,8 @@ type UserViewRepository interface {
 	CreateUserView(ctx context.Context, userView view.UserView) error
 	// DeleteUserView removes the user view document for the given id.
 	DeleteUserView(ctx context.Context, id int) error
+	// UpdateUserViewEmail updates only the email field for the given user view document.
+	UpdateUserViewEmail(ctx context.Context, id int, email string) error
 }
 
 // NewPostgresUserRepository creates a new PostgresUserRepository.
@@ -101,4 +103,20 @@ func (r *MongoUserViewRepository) DeleteUserView(ctx context.Context, id int) er
 	collection := r.DB.Collection("users")
 	_, err := collection.DeleteOne(ctx, bson.M{"id": id})
 	return err
+}
+
+// UpdateUserViewEmail updates only the email field for the given user view document.
+func (r *MongoUserViewRepository) UpdateUserViewEmail(ctx context.Context, id int, email string) error {
+	result, err := r.DB.Collection("users").UpdateOne(
+		ctx,
+		bson.M{"id": id},
+		bson.M{"$set": bson.M{"email": email}},
+	)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
 }

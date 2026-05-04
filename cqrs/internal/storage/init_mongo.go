@@ -13,7 +13,7 @@ import (
 )
 
 // InitMongoDB connects to MongoDB using the global MongoConnect config, pings the
-// primary to verify connectivity, and returns the client and the "email_service" database.
+// primary to verify connectivity, and returns the configured database.
 func InitMongoDB() (*mongo.Client, *mongo.Database, error) {
 	cfg := config.MongoConnect
 
@@ -34,6 +34,6 @@ func InitMongoDB() (*mongo.Client, *mongo.Database, error) {
 		return nil, nil, err
 	}
 
-	db := client.Database("email_service")
+	db := client.Database(cfg.DBName)
 	return client, db, nil
 }

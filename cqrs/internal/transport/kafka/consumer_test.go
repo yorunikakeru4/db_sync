@@ -47,7 +47,7 @@ func TestDispatchEvent_UserCreated(t *testing.T) {
 	require.NoError(t, err)
 	userViewRepo.AssertCalled(t, "CreateUserView", mock.Anything, mock.Anything)
 	contactViewRepo.AssertNotCalled(t, "AddContactToUser")
-	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
+	msgViewRepo.AssertNotCalled(t, "UpsertMessageToUser")
 }
 
 func TestDispatchEvent_UserCreated_StringTimestamp(t *testing.T) {
@@ -94,12 +94,37 @@ func TestDispatchEvent_UserDeleted(t *testing.T) {
 	userViewRepo.AssertCalled(t, "DeleteUserView", mock.Anything, mock.Anything)
 }
 
+func TestDispatchEvent_UserUpdated(t *testing.T) {
+	userViewRepo := new(mocks.MockUserViewRepository)
+	contactViewRepo := new(mocks.MockContactViewRepository)
+	msgViewRepo := new(mocks.MockMessageViewRepository)
+
+	userViewRepo.On("UpdateUserViewEmail", mock.Anything, 1, "alice+new@example.com").Return(nil)
+
+	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
+	consumer := &KafkaConsumer{}
+
+	event := &events.Event{
+		EventType: "user_updated",
+		Payload: map[string]any{
+			"id":    1,
+			"email": "alice+new@example.com",
+		},
+	}
+	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
+
+	require.NoError(t, err)
+	userViewRepo.AssertCalled(t, "UpdateUserViewEmail", mock.Anything, 1, "alice+new@example.com")
+	contactViewRepo.AssertNotCalled(t, "AddContactToUser")
+	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
+}
+
 func TestDispatchEvent_MessageCreated(t *testing.T) {
 	userViewRepo := new(mocks.MockUserViewRepository)
 	contactViewRepo := new(mocks.MockContactViewRepository)
 	msgViewRepo := new(mocks.MockMessageViewRepository)
 
-	msgViewRepo.On("AddMessageToUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	msgViewRepo.On("UpsertMessageToUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	syncSvc := syncServiceWith(userViewRepo, contactViewRepo, msgViewRepo)
 	consumer := &KafkaConsumer{}
@@ -117,7 +142,7 @@ func TestDispatchEvent_MessageCreated(t *testing.T) {
 	err := consumer.DispatchEvent(context.Background(), event, syncSvc)
 
 	require.NoError(t, err)
-	msgViewRepo.AssertCalled(t, "AddMessageToUser", mock.Anything, mock.Anything, mock.Anything)
+	msgViewRepo.AssertCalled(t, "UpsertMessageToUser", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestDispatchEvent_MessageDeleted(t *testing.T) {
@@ -226,7 +251,7 @@ func TestDispatchEvent_UnknownType(t *testing.T) {
 	userViewRepo.AssertNotCalled(t, "CreateUserView")
 	userViewRepo.AssertNotCalled(t, "DeleteUserView")
 	contactViewRepo.AssertNotCalled(t, "AddContactToUser")
-	msgViewRepo.AssertNotCalled(t, "AddMessageToUser")
+	msgViewRepo.AssertNotCalled(t, "UpsertMessageToUser")
 }
 
 func TestConsumerConfig_UsesConsumerGroup(t *testing.T) {

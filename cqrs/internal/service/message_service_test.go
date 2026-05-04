@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHandleMessageAddedToUser(t *testing.T) {
+func TestHandleMessageUpsertToUser(t *testing.T) {
 	sentAt := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -58,10 +58,10 @@ func TestHandleMessageAddedToUser(t *testing.T) {
 				Text:      tc.payload.Content,
 				CreatedAt: tc.payload.DateSent,
 			}
-			repo.On("AddMessageToUser", context.Background(), tc.payload.UserID, expected).Return(tc.repoErr)
+			repo.On("UpsertMessageToUser", context.Background(), tc.payload.UserID, expected).Return(tc.repoErr)
 
 			svc := NewMessageService(repo)
-			err := svc.HandleMessageAddedToUser(context.Background(), tc.payload)
+			err := svc.HandleMessageUpsertToUser(context.Background(), tc.payload)
 
 			if tc.wantErr {
 				require.Error(t, err)

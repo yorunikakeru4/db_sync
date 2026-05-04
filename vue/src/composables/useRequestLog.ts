@@ -1,5 +1,5 @@
 import { readonly, ref } from 'vue'
-import type { RequestLogEntry } from '../types/api'
+import type { RequestLogEntry } from '../types/api.ts'
 
 const entries = ref<RequestLogEntry[]>([])
 

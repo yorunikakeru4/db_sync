@@ -83,6 +83,35 @@ func TestIntegration_UserDeleted(t *testing.T) {
 	assert.Equal(t, int64(0), count)
 }
 
+func TestMongoUserViewRepository_UpdateUserViewEmail_PreservesEmbeddedState(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	db.Reset(t)
+	ctx := context.Background()
+
+	repo := storage.NewMongoUserViewRepository(db.Mongo)
+	err := repo.CreateUserView(ctx, view.UserView{
+		ID:          3,
+		Email:       "old@example.com",
+		NumMessages: 1,
+		Messages: []view.MessageView{{
+			ID:      11,
+			Subject: "Keep me",
+			Text:    "same",
+		}},
+		ImportantContacts: []view.ImportantContactView{{Value: "vip@example.com"}},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.UpdateUserViewEmail(ctx, 3, "new@example.com"))
+
+	var got view.UserView
+	require.NoError(t, db.Mongo.Collection("users").FindOne(ctx, bson.M{"id": 3}).Decode(&got))
+	assert.Equal(t, "new@example.com", got.Email)
+	assert.Len(t, got.Messages, 1)
+	assert.Equal(t, 1, got.NumMessages)
+	assert.Len(t, got.ImportantContacts, 1)
+}
+
 // buildSyncSvc assembles a SyncService backed by the live test databases.
 func buildSyncSvc(db *testutil.TestDB) *service.SyncService {
 	return service.NewSyncService(

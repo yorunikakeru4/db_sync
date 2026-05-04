@@ -21,6 +21,8 @@ type UserView struct {
 
 // ImportantContactView is the embedded contact sub-document.
 type ImportantContactView struct {
+	// ContactID is the contact primary key.
+	ContactID int64 `bson:"contact_id" json:"contact_id,omitempty"`
 	// Value is the contact value.
 	Value string `bson:"value" json:"value"`
 	// Category is the contact category.
@@ -39,4 +41,30 @@ type MessageView struct {
 	Text string `bson:"text" json:"text"`
 	// CreatedAt is the message timestamp.
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+}
+
+// ContactRow is a flattened contact row derived from user projections.
+type ContactRow struct {
+	// UserID is the owner user identifier.
+	UserID int64 `json:"user_id"`
+	// Value is the contact value.
+	Value string `json:"value"`
+	// Category is the contact category.
+	Category string `json:"category"`
+	// Importance is the contact importance.
+	Importance int `json:"importance"`
+}
+
+// MessageRow is a flattened message row derived from user projections.
+type MessageRow struct {
+	// UserID is the owner user identifier.
+	UserID int64 `json:"user_id"`
+	// ID is the message identifier.
+	ID int64 `json:"id"`
+	// Subject is the message subject.
+	Subject string `json:"subject"`
+	// Text is the message body.
+	Text string `json:"text"`
+	// CreatedAt is the message timestamp.
+	CreatedAt time.Time `json:"created_at"`
 }

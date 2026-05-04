@@ -27,10 +27,10 @@ type ContactRepository interface {
 type ContactViewRepository interface {
 	// AddContactToUser appends an important contact to the user's contacts array.
 	AddContactToUser(ctx context.Context, userID int, contact view.ImportantContactView) error
-	// UpdateContactForUser updates an existing contact matched by oldValue.
-	UpdateContactForUser(ctx context.Context, userID int, oldValue string, contact view.ImportantContactView) error
-	// RemoveContactFromUser removes the contact matching value from the user's contacts array.
-	RemoveContactFromUser(ctx context.Context, userID int, value string) error
+	// UpdateContactForUser updates an existing contact matched by contactID.
+	UpdateContactForUser(ctx context.Context, userID int, contactID int, contact view.ImportantContactView) error
+	// RemoveContactFromUser removes the contact matching contactID from the user's contacts array.
+	RemoveContactFromUser(ctx context.Context, userID int, contactID int) error
 }
 
 // PostgresContactRepository implements ContactRepository using PostgreSQL.
@@ -95,17 +95,17 @@ func (r *MongoContactViewRepository) AddContactToUser(
 	return nil
 }
 
-// UpdateContactForUser updates category and importance for the contact matching contact.Value.
+// UpdateContactForUser updates the contact matching contactID.
 func (r *MongoContactViewRepository) UpdateContactForUser(
 	ctx context.Context,
 	userID int,
-	oldValue string,
+	contactID int,
 	contact view.ImportantContactView,
 ) error {
 	collection := r.DB.Collection("users")
 	result, err := collection.UpdateOne(
 		ctx,
-		bson.M{"id": userID, "important_contacts.value": oldValue},
+		bson.M{"id": userID, "important_contacts.contact_id": contactID},
 		bson.M{
 			"$set": bson.M{
 				"important_contacts.$.value":      contact.Value,
@@ -123,17 +123,17 @@ func (r *MongoContactViewRepository) UpdateContactForUser(
 	return nil
 }
 
-// RemoveContactFromUser pulls the contact matching value from the user's contacts array.
+// RemoveContactFromUser pulls the contact matching contactID from the user's contacts array.
 func (r *MongoContactViewRepository) RemoveContactFromUser(
 	ctx context.Context,
 	userID int,
-	value string,
+	contactID int,
 ) error {
 	collection := r.DB.Collection("users")
 	result, err := collection.UpdateOne(
 		ctx,
 		bson.M{"id": userID},
-		bson.M{"$pull": bson.M{"important_contacts": bson.M{"value": value}}},
+		bson.M{"$pull": bson.M{"important_contacts": bson.M{"contact_id": contactID}}},
 	)
 	if err != nil {
 		return err

@@ -48,3 +48,11 @@ func (us *UserService) HandleUserDeleted(
 ) error {
 	return us.userViewRepo.DeleteUserView(ctx, event.ID)
 }
+
+// HandleUserUpdated projects a user_updated event by updating the user email in MongoDB.
+func (us *UserService) HandleUserUpdated(
+	ctx context.Context,
+	event events.UserUpdatedPayload,
+) error {
+	return us.userViewRepo.UpdateUserViewEmail(ctx, event.ID, event.Email)
+}

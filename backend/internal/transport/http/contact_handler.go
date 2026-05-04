@@ -3,14 +3,12 @@ package http
 import (
 	"fmt"
 	nethttp "net/http"
-	"strconv"
-	"time"
 
 	"backend/internal/bunmodel"
-	"backend/internal/events"
 
 	"github.com/goccy/go-yaml"
 	"github.com/uptrace/bunrouter"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type addContactRequest struct {
@@ -21,9 +19,38 @@ type addContactRequest struct {
 }
 
 func (h *Handler) registerContactRoutes() {
+	h.router.GET("/contacts", h.listContacts)
+	h.router.GET("/users/:user_id/contacts", h.listContactsByUserID)
 	h.router.POST("/users/:user_id/contacts", h.addContact)
 	h.router.PUT("/users/:user_id/contacts/:contact_id", h.updateContact)
 	h.router.DELETE("/users/:user_id/contacts/:contact_id", h.deleteContact)
+}
+
+func (h *Handler) listContacts(w nethttp.ResponseWriter, req bunrouter.Request) error {
+	contacts, err := h.userViews.ListContactViews(req.Context())
+	if err != nil {
+		nethttp.Error(w, fmt.Sprintf("list contacts: %v", err), nethttp.StatusInternalServerError)
+		return nil
+	}
+	return bunrouter.JSON(w, contacts)
+}
+
+func (h *Handler) listContactsByUserID(w nethttp.ResponseWriter, req bunrouter.Request) error {
+	userID, err := pathInt64(req, "user_id")
+	if err != nil {
+		nethttp.Error(w, fmt.Sprintf("parse user_id: %v", err), nethttp.StatusBadRequest)
+		return nil
+	}
+	contacts, err := h.userViews.ListContactViewsByUserID(req.Context(), userID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			nethttp.Error(w, "user not found", nethttp.StatusNotFound)
+			return nil
+		}
+		nethttp.Error(w, fmt.Sprintf("list contacts by user: %v", err), nethttp.StatusInternalServerError)
+		return nil
+	}
+	return bunrouter.JSON(w, contacts)
 }
 
 func (h *Handler) addContact(w nethttp.ResponseWriter, req bunrouter.Request) error {
@@ -45,17 +72,7 @@ func (h *Handler) addContact(w nethttp.ResponseWriter, req bunrouter.Request) er
 		nethttp.Error(w, fmt.Sprintf("add contact: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
-	if err := h.producer.Publish(req.Context(), events.ContactAdded, events.ContactAddedPayload{
-		ContactID:  contact.ID,
-		UserID:     userID,
-		Value:      contact.Value,
-		Category:   strconv.Itoa(userContact.Category),
-		Importance: userContact.Importance,
-		CreatedAt:  userContact.CreatedAt,
-	}); err != nil {
-		nethttp.Error(w, fmt.Sprintf("publish contact_added: %v", err), nethttp.StatusInternalServerError)
-		return nil
-	}
+	// Event captured by PostgreSQL trigger → domain_events → worker → Kafka
 
 	w.WriteHeader(nethttp.StatusCreated)
 	return bunrouter.JSON(w, struct {
@@ -84,25 +101,12 @@ func (h *Handler) updateContact(w nethttp.ResponseWriter, req bunrouter.Request)
 
 	contact := &bunmodel.Contact{ID: contactID, Value: body.Value}
 	userContact := &bunmodel.UserContact{UserID: userID, ContactID: contactID, Importance: body.Importance, Category: body.Category}
-	before, err := h.contacts.UpdateUserContact(req.Context(), userContact, contact)
+	_, err = h.contacts.UpdateUserContact(req.Context(), userContact, contact)
 	if err != nil {
 		nethttp.Error(w, fmt.Sprintf("update contact: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
-	if err := h.producer.Publish(req.Context(), events.ContactUpdated, events.ContactUpdatedPayload{
-		ContactID:     contact.ID,
-		Value:         contact.Value,
-		OldValue:      before.OldValue,
-		UserID:        userID,
-		OldCategory:   strconv.Itoa(before.OldCategory),
-		NewCategory:   strconv.Itoa(userContact.Category),
-		OldImportance: before.OldImportance,
-		NewImportance: userContact.Importance,
-		UpdatedAt:     time.Now().UTC(),
-	}); err != nil {
-		nethttp.Error(w, fmt.Sprintf("publish contact_updated: %v", err), nethttp.StatusInternalServerError)
-		return nil
-	}
+	// Event captured by PostgreSQL trigger → domain_events → worker → Kafka
 
 	return bunrouter.JSON(w, struct {
 		Contact     *bunmodel.Contact     `json:"contact"`
@@ -122,19 +126,12 @@ func (h *Handler) deleteContact(w nethttp.ResponseWriter, req bunrouter.Request)
 		return nil
 	}
 
-	deleted, err := h.contacts.DeleteUserContact(req.Context(), userID, contactID)
+	_, err = h.contacts.DeleteUserContact(req.Context(), userID, contactID)
 	if err != nil {
 		nethttp.Error(w, fmt.Sprintf("delete contact: %v", err), nethttp.StatusInternalServerError)
 		return nil
 	}
-	if err := h.producer.Publish(req.Context(), events.ContactRemoved, events.ContactRemovedPayload{
-		ContactID: deleted.Contact.ID,
-		Value:     deleted.Contact.Value,
-		UserID:    userID,
-	}); err != nil {
-		nethttp.Error(w, fmt.Sprintf("publish contact_removed: %v", err), nethttp.StatusInternalServerError)
-		return nil
-	}
+	// Event captured by PostgreSQL trigger → domain_events → worker → Kafka
 
 	w.WriteHeader(nethttp.StatusNoContent)
 	return nil

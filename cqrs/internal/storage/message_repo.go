@@ -28,6 +28,8 @@ type MessageRepository interface {
 type MessageViewRepository interface {
 	// AddMessageToUser appends a message view to the user's messages array.
 	AddMessageToUser(ctx context.Context, userID int, message view.MessageView) error
+	// UpsertMessageToUser replaces an existing embedded message or appends a new one.
+	UpsertMessageToUser(ctx context.Context, userID int, message view.MessageView) error
 	// RemoveMessageFromUser removes a message view from the user's messages array.
 	RemoveMessageFromUser(ctx context.Context, userID int, messageID int) error
 }
@@ -93,6 +95,43 @@ func (r *MongoMessageViewRepository) AddMessageToUser(
 		return err
 	}
 	if result.MatchedCount == 0 {
+		return errors.Join(ErrMessageViewUserNotFound, mongo.ErrNoDocuments)
+	}
+	return nil
+}
+
+// UpsertMessageToUser replaces an existing embedded message or appends it when absent.
+func (r *MongoMessageViewRepository) UpsertMessageToUser(
+	ctx context.Context,
+	userID int,
+	message view.MessageView,
+) error {
+	collection := r.DB.Collection("users")
+
+	updateExisting, err := collection.UpdateOne(
+		ctx,
+		bson.M{"id": userID, "messages.id": message.ID},
+		bson.M{"$set": bson.M{"messages.$": message}},
+	)
+	if err != nil {
+		return err
+	}
+	if updateExisting.MatchedCount > 0 {
+		return nil
+	}
+
+	insertNew, err := collection.UpdateOne(
+		ctx,
+		bson.M{"id": userID},
+		bson.M{
+			"$push": bson.M{"messages": message},
+			"$inc":  bson.M{"num_messages": 1},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if insertNew.MatchedCount == 0 {
 		return errors.Join(ErrMessageViewUserNotFound, mongo.ErrNoDocuments)
 	}
 	return nil

@@ -1,7 +1,5 @@
 package config
 
-import "os"
-
 // SQLConnection holds the PostgreSQL connection parameters.
 type SQLConnection struct {
 	// Host is the PostgreSQL server hostname.
@@ -18,9 +16,9 @@ type SQLConnection struct {
 
 // SQLConnect is the global PostgreSQL connection configuration.
 var SQLConnect = SQLConnection{
-	Host:     "email_postgres",
-	Port:     "5432",
-	User:     os.Getenv("POSTGRES_USER"),
-	Password: os.Getenv("POSTGRES_PASSWORD"),
-	Name:     os.Getenv("POSTGRES_DB"),
+	Host:     getEnv("POSTGRES_HOST", "localhost"),
+	Port:     getEnv("POSTGRES_PORT", "5432"),
+	User:     getEnv("POSTGRES_USER", "db_user"),
+	Password: getEnv("POSTGRES_PASSWORD", "db_password"),
+	Name:     getEnv("POSTGRES_DB", "db_name"),
 }

@@ -46,3 +46,12 @@ func (r *MessageRepo) DeleteMessage(ctx context.Context, id int64) (*bunmodel.Me
 	}
 	return message, nil
 }
+
+// ListMessages returns all messages ordered by primary key.
+func (r *MessageRepo) ListMessages(ctx context.Context) ([]bunmodel.Message, error) {
+	messages := make([]bunmodel.Message, 0)
+	if err := r.db.NewSelect().Model(&messages).Order("id ASC").Scan(ctx); err != nil {
+		return nil, err
+	}
+	return messages, nil
+}

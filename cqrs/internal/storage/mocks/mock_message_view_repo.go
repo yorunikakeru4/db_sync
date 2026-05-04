@@ -23,6 +23,16 @@ func (m *MockMessageViewRepository) AddMessageToUser(
 	return args.Error(0)
 }
 
+// UpsertMessageToUser implements storage.MessageViewRepository.
+func (m *MockMessageViewRepository) UpsertMessageToUser(
+	ctx context.Context,
+	userID int,
+	message view.MessageView,
+) error {
+	args := m.Called(ctx, userID, message)
+	return args.Error(0)
+}
+
 // RemoveMessageFromUser implements storage.MessageViewRepository.
 func (m *MockMessageViewRepository) RemoveMessageFromUser(
 	ctx context.Context,

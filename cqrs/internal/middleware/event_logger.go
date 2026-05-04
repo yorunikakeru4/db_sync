@@ -41,6 +41,7 @@ func (lc *LoggingConsumer) GetEvent(ctx context.Context) (*events.Event, error) 
 		slog.String("event_type", event.EventType),
 		slog.Int("version", event.Version),
 		slog.Time("emitted_at", event.Timestamp),
+		slog.Any("payload", event.Payload),
 	)
 	return event, nil
 }
@@ -55,6 +56,7 @@ func (lc *LoggingConsumer) DispatchEvent(
 	lc.logger.InfoContext(ctx, "dispatching event",
 		slog.String("event_id", event.EventID),
 		slog.String("event_type", event.EventType),
+		slog.Any("payload", event.Payload),
 	)
 
 	err := lc.inner.DispatchEvent(ctx, event, syncService)

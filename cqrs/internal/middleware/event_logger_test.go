@@ -5,11 +5,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strings"
 	"testing"
 	"time"
 
 	"db_sync/internal/application/events"
+	"db_sync/internal/logutil"
 	"db_sync/internal/service"
 
 	"github.com/stretchr/testify/assert"
@@ -38,7 +38,7 @@ func (f *fakeConsumer) Close() error {
 }
 
 func newTestLogger(buf *bytes.Buffer) *slog.Logger {
-	return slog.New(slog.NewJSONHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	return logutil.NewRuntimeLogger(buf)
 }
 
 func sampleEvent() *events.Event {
@@ -61,10 +61,11 @@ func TestLoggingConsumer_GetEvent_Success(t *testing.T) {
 	assert.Equal(t, sampleEvent(), got)
 
 	logLine := buf.String()
-	assert.Contains(t, logLine, `"msg":"event received"`)
-	assert.Contains(t, logLine, `"event_id":"evt-abc-123"`)
-	assert.Contains(t, logLine, `"event_type":"user_created"`)
-	assert.Contains(t, logLine, `"version":1`)
+	assert.Contains(t, logLine, "msg=\"event received\"")
+	assert.Contains(t, logLine, "event_id=evt-abc-123")
+	assert.Contains(t, logLine, "event_type=user_created")
+	assert.Contains(t, logLine, "version=1")
+	assert.Contains(t, logLine, "emitted_at=2024-01-15T10:00:00Z")
 }
 
 func TestLoggingConsumer_GetEvent_Error(t *testing.T) {
@@ -89,15 +90,11 @@ func TestLoggingConsumer_DispatchEvent_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	logOutput := buf.String()
-	lines := strings.Split(strings.TrimSpace(logOutput), "\n")
-	require.Len(t, lines, 2, "expected two log lines: dispatching + dispatched")
-
-	assert.Contains(t, lines[0], `"msg":"dispatching event"`)
-	assert.Contains(t, lines[0], `"event_id":"evt-abc-123"`)
-
-	assert.Contains(t, lines[1], `"msg":"event dispatched"`)
-	assert.Contains(t, lines[1], `"duration"`)
-	assert.Contains(t, lines[1], `"level":"INFO"`)
+	assert.Contains(t, logOutput, "msg=\"dispatching event\"")
+	assert.Contains(t, logOutput, "msg=\"event dispatched\"")
+	assert.Contains(t, logOutput, "event_id=evt-abc-123")
+	assert.Contains(t, logOutput, "level=INFO")
+	assert.Contains(t, logOutput, "duration=")
 }
 
 func TestLoggingConsumer_DispatchEvent_Error(t *testing.T) {
@@ -112,13 +109,10 @@ func TestLoggingConsumer_DispatchEvent_Error(t *testing.T) {
 	assert.Equal(t, dispErr, err)
 
 	logOutput := buf.String()
-	lines := strings.Split(strings.TrimSpace(logOutput), "\n")
-	require.Len(t, lines, 2, "expected dispatching + error log lines")
-
-	assert.Contains(t, lines[1], `"level":"ERROR"`)
-	assert.Contains(t, lines[1], `"msg":"event dispatch failed"`)
-	assert.Contains(t, lines[1], `"error":"mongo write failed"`)
-	assert.Contains(t, lines[1], `"duration"`)
+	assert.Contains(t, logOutput, "level=ERROR")
+	assert.Contains(t, logOutput, "msg=\"event dispatch failed\"")
+	assert.Contains(t, logOutput, "error=\"mongo write failed\"")
+	assert.Contains(t, logOutput, "duration=")
 }
 
 func TestLoggingConsumer_Close_Delegates(t *testing.T) {

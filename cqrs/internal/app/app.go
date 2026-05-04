@@ -4,12 +4,12 @@ package app
 import (
 	"context"
 	"log"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"db_sync/internal/logutil"
 	"db_sync/internal/middleware"
 	"db_sync/internal/service"
 	"db_sync/internal/storage"
@@ -54,9 +54,7 @@ func Run() {
 		messageService,
 	)
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	logger := logutil.NewRuntimeLogger(os.Stdout)
 
 	reader := kafka.InitConsumer()
 	consumer := middleware.NewLoggingConsumer(kafka.NewKafkaConsumer(reader), logger)
